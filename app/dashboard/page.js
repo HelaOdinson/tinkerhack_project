@@ -18,10 +18,9 @@ export default function Dashboard() {
   const [currentPic, setCurrentPic] = useState(1);
   const [inputText, setInputText] = useState('');
   
-  // Added pre-existing chat messages as requested
   const [messages, setMessages] = useState([
-    { id: 'pre-1', sender: 'her', text: 'u coming??' },
-    { id: 'pre-2', sender: 'me', text: 'yeah i am here' }
+    { id: 'pre-1', sender: 'her', text: 'Kazhichoda??' },
+    { id: 'pre-2', sender: 'me', text: 'Illeda innu pattiniya' }
   ]);
   
   const chatEndRef = useRef(null);
@@ -38,22 +37,6 @@ export default function Dashboard() {
     space3: { title: "AI Circle", tagline: "Learning Beyond Limits 🤖" },
   };
 
-  const spaceConfig = {
-  space1: {
-    title: "Cyber Squad",
-    tagline: "Encrypted & Connected 🔐",
-  },
-  space2: {
-    title: "Web Wizards",
-    tagline: "Building Magic Together ✨",
-  },
-  space3: {
-    title: "AI Circle",
-    tagline: "Learning Beyond Limits 🤖",
-  },
-};
-
-
   useEffect(() => {
     setMounted(true);
     const timer = setInterval(() => {
@@ -68,7 +51,6 @@ export default function Dashboard() {
       const data = snapshot.val();
       if (data) {
         const msgList = Object.entries(data).map(([id, val]) => ({ id, ...val }));
-        // Combine pre-existing with firebase messages
         setMessages([
           { id: 'pre-1', sender: 'her', text: 'Kazhichoda??' },
           { id: 'pre-2', sender: 'me', text: 'Illeda innu pattiniya' },
@@ -82,6 +64,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const nextPic = () => setCurrentPic(prev => (prev % 3) + 1);
+  const prevPic = () => setCurrentPic(prev => (prev === 1 ? 3 : prev - 1));
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -126,22 +111,10 @@ export default function Dashboard() {
         <header className="flex justify-between items-center mb-10 max-w-6xl mx-auto">
           <div>
             <h1 className={`font-romantic italic font-black text-5xl tracking-tight ${currentTheme.title}`}>
-<<<<<<< HEAD
-              {spaceId && spaceConfig[spaceId]
-              ? spaceConfig[spaceId].title
-              : "The Chaos Corner"}
-            </h1>
-
-            <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>
-              {spaceId && spaceConfig[spaceId]
-              ? spaceConfig[spaceId].tagline
-              : "5.5 Hours Apart • Connected ❤️"}
-=======
               {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].title : "The Chaos Corner"}
             </h1>
             <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>
               {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].tagline : "5.5 Hours Apart • Connected ❤️"}
->>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
             </p>
           </div>
 
@@ -154,7 +127,6 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-6xl mx-auto pb-10">
-          {/* LEFT ASIDE */}
           <aside className="md:col-span-3 space-y-6">
             <div className={`bg-white p-6 rounded-[2.5rem] border ${currentTheme.border} shadow-2xl relative z-10`}>
               <h3 className={`font-romantic italic text-xl mb-4 text-center ${currentTheme.text}`}>Our Timeline</h3>
@@ -174,7 +146,6 @@ export default function Dashboard() {
                  <p className={`text-sm font-bold ${currentTheme.text}`}>Stranger Things</p>
               </div>
 
-              {/* DISTANCE CARD */}
               <div className={`p-5 rounded-2xl bg-white/80 border-2 ${currentTheme.border} shadow-inner flex flex-col items-center text-center`}>
                 <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${currentTheme.text}`}>The Gap Between Us</p>
                 <div className="relative w-full h-14 mb-4 flex items-center justify-center">
@@ -196,11 +167,28 @@ export default function Dashboard() {
             </div>
           </aside>
 
-          {/* CENTER SECTION */}
           <section className="md:col-span-6 space-y-6 text-center">
+            {/* Main Slideshow with Hover Indicators */}
             <div className="bg-white p-4 rounded-[3.5rem] shadow-2xl border-[16px] border-white h-[450px] relative overflow-hidden group">
               <div onClick={() => setIsZoomed(!isZoomed)} className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-200 cursor-pointer">
                 <Image src={`/memories/pic${currentPic}.jpg`} alt="Memory" fill priority className={`transition-all duration-1000 ${isZoomed ? 'object-cover object-top' : 'object-contain scale-95'}`} />
+                
+                {/* Left Indicator */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); prevPic(); }} 
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/50 z-30"
+                >
+                  ❮
+                </button>
+                
+                {/* Right Indicator */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); nextPic(); }} 
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-black/50 z-30"
+                >
+                  ❯
+                </button>
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                 <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
                   <p className="text-white font-romantic italic text-2xl drop-shadow-lg leading-tight">Forever favorite.</p>
@@ -213,7 +201,6 @@ export default function Dashboard() {
               <span className="group-hover:translate-x-1 transition-transform">✨</span>
             </Link>
 
-            {/* CHAT SECTION WITH INITIAL MESSAGES */}
             <div className="bg-white rounded-[2.5rem] shadow-xl p-4 h-[260px] flex flex-col border border-slate-50">
               <div className="flex-1 overflow-y-auto p-2 space-y-3 no-scrollbar">
                 {messages.map((msg) => (
@@ -230,7 +217,6 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* RIGHT ASIDE */}
           <aside className="md:col-span-3 space-y-6">
             <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl text-center">
                <div className="space-y-4">
@@ -244,11 +230,15 @@ export default function Dashboard() {
                <h3 className="text-[10px] font-black tracking-widest text-slate-400 mb-6 text-center uppercase">Today's Pulse</h3>
                <div className="space-y-6">
                   <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2"><Image src="/memories/me.jpg" alt="Me" fill className="object-cover" /></div>
+                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
+                       <Image src="/memories/me.jpg" alt="Me" fill className="object-cover" />
+                     </div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Topher ✨</p>
                   </div>
                   <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2"><Image src="/memories/her.jpg" alt="Her" fill className="object-cover" /></div>
+                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
+                       <Image src="/memories/her.jpg" alt="Her" fill className="object-cover" />
+                     </div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Annabel 🌸</p>
                   </div>
                </div>
