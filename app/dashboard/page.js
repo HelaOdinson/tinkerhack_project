@@ -1,255 +1,14 @@
-<<<<<<< HEAD
-"use client";
-
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { getAuth } from "firebase/auth";
-import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
-export default function DashboardPage() {
-  const router = useRouter();
-  const auth = getAuth();
-
-  const [group, setGroup] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [memories, setMemories] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [sidebarPhotos, setSidebarPhotos] = useState([]);
-  const [groupName, setGroupName] = useState("");
-  const [meetDate, setMeetDate] = useState("");
-
-  const galleryRef = useRef(null);
-
-  // Fetch user and group
-  useEffect(() => {
-    const fetchGroup = async () => {
-      const user = auth.currentUser;
-      if (!user) return router.push("/login");
-
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      if (!userSnap.exists()) return router.push("/roles");
-
-      const userData = userSnap.data();
-      const groupId = userData?.groupId;
-      if (!groupId) return router.push("/roles");
-
-      const groupSnap = await getDoc(doc(db, "groups", groupId));
-      if (!groupSnap.exists()) return router.push("/roles");
-
-      const data = groupSnap.data();
-      setGroup({ ...data, groupId });
-      setGroupName(data.groupName || "");
-      setMeetDate(data.meetDate || "");
-      setMessages(data.messages || []);
-      setMemories(data.memories || []);
-      setLoading(false);
-    };
-
-    fetchGroup();
-  }, []);
-
-  if (loading) return <div className="p-8">Loading...</div>;
-
-  if (!group || !group.groupId)
-    return (
-      <div className="p-8 font-sans text-gray-900">
-        <h1 className="text-2xl font-bold mb-4">
-          You don’t have a group yet!
-        </h1>
-        <p>
-          Go to{" "}
-          <a href="/roles" className="text-rose-400 font-semibold">
-            /roles
-          </a>{" "}
-          to create or join a space.
-        </p>
-      </div>
-    );
-
-  // Chat handlers
-  const handleSend = async () => {
-    if (!newMessage.trim() || !group) return;
-
-    const msgObj = {
-      text: newMessage,
-      type: "primary1",
-      uid: auth.currentUser.uid,
-      timestamp: Date.now(),
-    };
-
-    setMessages([...messages, msgObj]);
-    setNewMessage("");
-
-    const groupRef = doc(db, "groups", group.groupId);
-    await updateDoc(groupRef, { messages: arrayUnion(msgObj) });
-  };
-
-  // Memory upload
-  const handleUploadMemory = async (e) => {
-    if (!e.target.files[0] || !group) return;
-    setUploading(true);
-
-    const file = e.target.files[0];
-    const fileRef = ref(storage, `memories/${group.groupId}/${file.name}`);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-
-    const groupRef = doc(db, "groups", group.groupId);
-    const newMemory = { imageUrl: url, uploadedBy: auth.currentUser.uid, timestamp: Date.now() };
-    await updateDoc(groupRef, { memories: arrayUnion(newMemory) });
-
-    setMemories((prev) => [...prev, newMemory]);
-    setUploading(false);
-  };
-
-  // Sidebar photo upload (not saved to grid)
-  const handleSidebarUpload = (e) => {
-    if (!e.target.files[0]) return;
-    const fileURL = URL.createObjectURL(e.target.files[0]);
-    setSidebarPhotos((prev) => [...prev, fileURL]);
-  };
-
-  // Scroll gallery left/right
-  const scrollGallery = (dir) => {
-    if (!galleryRef.current) return;
-    galleryRef.current.scrollBy({ left: dir * 300, behavior: "smooth" });
-  };
-
-  return (
-    <div className="min-h-screen bg-[#FFFDFB] font-sans p-6">
-      {/* Header */}
-      <header className="text-center py-6">
-        <h1 className="text-3xl font-bold inline-block px-6 py-2 rounded-lg bg-gradient-to-r from-rose-400 to-amber-400 text-white">
-          {group.groupName}
-        </h1>
-        <p className="mt-2 text-lg text-gray-700">
-          {meetDate
-            ? `Days until meet: ${Math.max(
-                0,
-                Math.ceil((new Date(meetDate) - new Date()) / (1000 * 60 * 60 * 24))
-              )}`
-            : "Set a meet date in your dashboard!"}
-        </p>
-      </header>
-
-      <main className="grid grid-cols-12 gap-4">
-        {/* Left: Members & Calendar */}
-        <aside className="col-span-3 flex flex-col gap-4">
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="font-semibold mb-2">Members</h2>
-            <div className="flex flex-wrap gap-2">
-              {group.members.map((uid) => (
-                <MemberAvatar key={uid} uid={uid} />
-              ))}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg p-4 shadow">
-            <h2 className="font-semibold mb-2">Calendar</h2>
-            <Calendar />
-          </div>
-        </aside>
-
-        {/* Middle: Memory Gallery */}
-        <section className="col-span-6 flex flex-col gap-2">
-          <div className="bg-white rounded-lg p-4 shadow relative">
-            <h2 className="font-semibold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-rose-400 to-amber-400">
-              Memory Gallery
-            </h2>
-
-            {/* Carousel buttons */}
-            <button
-              onClick={() => scrollGallery(-1)}
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-white p-1 rounded-full shadow"
-            >
-              ◀
-            </button>
-            <button
-              onClick={() => scrollGallery(1)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-white p-1 rounded-full shadow"
-            >
-              ▶
-            </button>
-
-            <div
-              ref={galleryRef}
-              className="flex overflow-x-scroll gap-2 scroll-smooth p-2"
-            >
-              {memories.map((m, idx) => (
-                <img
-                  key={idx}
-                  src={m.imageUrl}
-                  alt="Memory"
-                  className="rounded-lg cursor-pointer hover:scale-105 transition-transform w-40 h-32 object-cover"
-                />
-              ))}
-            </div>
-
-            <div className="flex gap-2 mt-2">
-              <input type="file" onChange={handleUploadMemory} disabled={uploading} />
-              {uploading && <span>Uploading...</span>}
-            </div>
-          </div>
-        </section>
-
-        {/* Right Sidebar: Camera / Photos */}
-        <aside className="col-span-3 flex flex-col gap-4">
-          <div className="bg-white rounded-lg p-4 shadow flex flex-col items-center">
-            <h2 className="font-semibold mb-2">Camera / Quick Photos</h2>
-            <input type="file" onChange={handleSidebarUpload} />
-            <div className="mt-2 grid grid-cols-1 gap-2 w-full">
-              {sidebarPhotos.map((url, i) => (
-                <img key={i} src={url} alt={`Quick ${i}`} className="rounded-lg w-full" />
-              ))}
-            </div>
-          </div>
-        </aside>
-      </main>
-
-      {/* Bottom: Chat (shorter width) */}
-      <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-10/12 bg-white p-4 shadow-inner rounded-lg">
-        <h2 className="font-semibold mb-2">Group Chat</h2>
-        <div className="flex flex-col gap-2 max-h-40 overflow-y-auto mb-2">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`px-3 py-2 rounded-lg self-start ${
-                msg.type === "primary1"
-                  ? "bg-rose-400 text-white"
-                  : "bg-amber-400 text-white self-end"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 p-2 border rounded-lg"
-          />
-          <button
-            onClick={handleSend}
-            className="px-4 py-2 rounded-lg bg-rose-400 text-white font-semibold"
-          >
-            Send
-          </button>
-        </div>
-      </footer>
-    </div>
-=======
 'use client';
+import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { db } from '../../lib/firebase'; 
+import { ref, onValue, push, serverTimestamp } from 'firebase/database';
 
 export default function Dashboard() {
+  const searchParams = useSearchParams();
+  const spaceId = searchParams.get("space");
   const [theme, setTheme] = useState('rose');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -258,28 +17,25 @@ export default function Dashboard() {
   const [isZoomed, setIsZoomed] = useState(true);
   const [currentPic, setCurrentPic] = useState(1);
   const [inputText, setInputText] = useState('');
+  
+  // Added pre-existing chat messages as requested
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'her', text: 'Miss you already! ❤️' },
-    { id: 2, sender: 'me', text: 'Me too, counting the days.' }
+    { id: 'pre-1', sender: 'her', text: 'u coming??' },
+    { id: 'pre-2', sender: 'me', text: 'yeah i am here' }
   ]);
-  const [myPhoto, setMyPhoto] = useState('/memories/me.jpg');
-  const [herPhoto, setHerPhoto] = useState('/memories/her.jpg');
+  
   const chatEndRef = useRef(null);
 
-  // Themes with Card backgrounds for the Schedule
   const themes = {
-    rose: { 
-      bg: "bg-[#FFF0F3]", border: "border-rose-200", text: "text-rose-700", title: "text-rose-950", 
-      accent: "bg-rose-400", chat: "bg-rose-400", card: "bg-rose-50 border-rose-300" 
-    },
-    green: { 
-      bg: "bg-[#E8F5E9]", border: "border-emerald-200", text: "text-emerald-700", title: "text-emerald-950", 
-      accent: "bg-emerald-400", chat: "bg-emerald-500", card: "bg-emerald-50 border-emerald-300" 
-    },
-    blue: { 
-      bg: "bg-[#E3F2FD]", border: "border-blue-200", text: "text-blue-700", title: "text-blue-950", 
-      accent: "bg-blue-400", chat: "bg-blue-500", card: "bg-blue-50 border-blue-300" 
-    },
+    rose: { bg: "bg-[#FFF0F3]", border: "border-rose-200", text: "text-rose-700", title: "text-rose-950", accent: "bg-rose-400", chat: "bg-rose-400", card: "bg-rose-50 border-rose-300" },
+    green: { bg: "bg-[#E8F5E9]", border: "border-emerald-200", text: "text-emerald-700", title: "text-emerald-950", accent: "bg-emerald-400", chat: "bg-emerald-500", card: "bg-emerald-50 border-emerald-300" },
+    blue: { bg: "bg-[#E3F2FD]", border: "border-blue-200", text: "text-blue-700", title: "text-blue-950", accent: "bg-blue-400", chat: "bg-blue-500", card: "bg-blue-50 border-blue-300" },
+  };
+
+  const spaceConfig = {
+    space1: { title: "Cyber Squad", tagline: "Encrypted & Connected 🔐" },
+    space2: { title: "Web Wizards", tagline: "Building Magic Together ✨" },
+    space3: { title: "AI Circle", tagline: "Learning Beyond Limits 🤖" },
   };
 
   useEffect(() => {
@@ -290,19 +46,44 @@ export default function Dashboard() {
       const herDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
       setTimeAway(herDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }, 1000);
+
+    const messagesRef = ref(db, 'messages');
+    const unsubscribe = onValue(messagesRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const msgList = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+        // Combine pre-existing with firebase messages
+        setMessages([
+          { id: 'pre-1', sender: 'her', text: 'Kazhichoda??' },
+          { id: 'pre-2', sender: 'me', text: 'Illeda innu pattiniya' },
+          ...msgList
+        ]);
+      }
+    });
+
     const slideTimer = setInterval(() => setCurrentPic(prev => (prev % 3) + 1), 5000);
-    return () => { clearInterval(timer); clearInterval(slideTimer); };
+    return () => { clearInterval(timer); clearInterval(slideTimer); unsubscribe(); };
   }, []);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    await push(ref(db, 'messages'), {
+      text: inputText,
+      sender: 'me',
+      timestamp: serverTimestamp()
+    });
+    setInputText('');
+  };
 
   if (!mounted) return null;
   const currentTheme = themes[theme];
 
   return (
     <main className={`flex min-h-screen ${currentTheme.bg} transition-all duration-500 ease-in-out`}>
-      
-      {/* SIDEBAR: "My Spaces" Navigation */}
+      {/* SIDEBAR */}
       <aside className={`transition-all duration-500 ease-in-out bg-white/40 backdrop-blur-2xl border-r border-white/20 flex flex-col p-4 sticky top-0 h-screen shadow-xl ${isSidebarExpanded ? 'w-72' : 'w-24'}`}>
         <button onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} className="flex flex-col gap-1.5 p-2 mb-10 cursor-pointer group w-fit">
           <div className={`h-0.5 w-6 bg-slate-800 transition-all ${isSidebarExpanded ? 'rotate-45 translate-y-2' : ''}`} />
@@ -311,29 +92,29 @@ export default function Dashboard() {
         </button>
 
         <div className={`flex items-center gap-3 mb-10 ${!isSidebarExpanded && 'justify-center'}`}>
-          <div className="relative w-10 h-10">
-            <Image src="/logo.png" alt="Logo" fill className="object-contain rotate-[-5deg]" priority />
-          </div>
+          <div className="relative w-10 h-10"><Image src="/logo.png" alt="Logo" fill className="object-contain rotate-[-5deg]" priority /></div>
           {isSidebarExpanded && <span className={`font-romantic italic font-black text-2xl ${currentTheme.title}`}>BeyondMiles</span>}
         </div>
 
         <nav className="flex-1 space-y-2">
-          {/* Replaced Dashboard with My Spaces */}
-          {['My Spaces', 'Memories', 'Settings'].map((item) => (
+          {['Dashboard', 'Settings'].map((item) => (
             <button key={item} className={`flex items-center gap-4 w-full px-3 py-3 rounded-xl hover:bg-white/60 transition-all font-bold text-sm ${currentTheme.text} ${!isSidebarExpanded && 'justify-center'}`}>
-              <span className="text-xl">{item === 'My Spaces' ? '🚀' : item === 'Memories' ? '✨' : '⚙️'}</span>
+              <span className="text-xl">{item === 'Dashboard' ? '🏡' : '⚙️'}</span>
               {isSidebarExpanded && <span>{item}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1 p-8">
         <header className="flex justify-between items-center mb-10 max-w-6xl mx-auto">
           <div>
-            <h1 className={`font-romantic italic font-black text-5xl tracking-tight ${currentTheme.title}`}>The Chaos Corner</h1>
-            <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>Connected with Annabel ❤️</p>
+            <h1 className={`font-romantic italic font-black text-5xl tracking-tight ${currentTheme.title}`}>
+              {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].title : "The Chaos Corner"}
+            </h1>
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>
+              {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].tagline : "5.5 Hours Apart • Connected ❤️"}
+            </p>
           </div>
 
           <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-3 rounded-3xl border border-white shadow-lg">
@@ -345,27 +126,39 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-6xl mx-auto pb-10">
-          
-          {/* TIMELINE & THEME-SYNCED SCHEDULE */}
+          {/* LEFT ASIDE */}
           <aside className="md:col-span-3 space-y-6">
             <div className={`bg-white p-6 rounded-[2.5rem] border ${currentTheme.border} shadow-2xl relative z-10`}>
               <h3 className={`font-romantic italic text-xl mb-4 text-center ${currentTheme.text}`}>Our Timeline</h3>
               <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-center opacity-30 mb-4">
                 {['S','M','T','W','T','F','S'].map((d, i) => <span key={i}>{d}</span>)}
               </div>
-              <div className="grid grid-cols-7 gap-1 mb-8">
+              <div className="grid grid-cols-7 gap-1 mb-6">
                 {[...Array(31)].map((_, i) => (
-                  <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80 hover:bg-slate-50`}`}>{i + 1}</div>
+                  <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80`}`}>{i + 1}</div>
                 ))}
               </div>
-              
-              {/* THEME-SYNCED SCHEDULE CARD */}
-              <div className={`p-4 rounded-2xl border-l-8 transition-colors duration-500 ${currentTheme.card} shadow-sm`}>
+              <div className={`p-4 rounded-2xl border-l-8 transition-colors duration-500 ${currentTheme.card} shadow-sm mb-6`}>
                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🍿</span>
-                    <p className="text-[10px] font-black opacity-50 uppercase tracking-tighter">Schedule</p>
+                    <p className="text-[10px] font-black opacity-50 uppercase tracking-tighter">Netflix Night</p>
                  </div>
-                 <p className={`text-sm font-bold ${currentTheme.text}`}>Netflix & Chill Night</p>
+                 <p className={`text-sm font-bold ${currentTheme.text}`}>Stranger Things</p>
+              </div>
+
+              {/* DISTANCE CARD */}
+              <div className={`p-5 rounded-2xl bg-white/80 border-2 ${currentTheme.border} shadow-inner flex flex-col items-center text-center`}>
+                <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 ${currentTheme.text}`}>The Gap Between Us</p>
+                <div className="relative w-full h-14 mb-4 flex items-center justify-center">
+                  <div className="absolute w-full h-[3px] bg-slate-200 rounded-full top-1/2 -translate-y-1/2"></div>
+                  <div className={`absolute left-0 w-4 h-4 rounded-full ${currentTheme.accent} border-2 border-white shadow-md z-20`}></div>
+                  <div className="absolute right-0 w-4 h-4 rounded-full bg-amber-400 border-2 border-white shadow-md z-20 animate-pulse"></div>
+                  <div className={`z-30 bg-slate-800 text-white px-4 py-1.5 rounded-full shadow-lg text-sm font-black italic tracking-tighter`}>8,200 km</div>
+                </div>
+                <div className="flex justify-between w-full px-2">
+                  <div className="flex flex-col items-start"><span className="text-[8px] font-black uppercase opacity-40">From</span><span className={`text-xs font-black ${currentTheme.title}`}>Kerala 🌴</span></div>
+                  <div className="flex flex-col items-end"><span className="text-[8px] font-black uppercase opacity-40">To</span><span className={`text-xs font-black ${currentTheme.title}`}>London 🎡</span></div>
+                </div>
               </div>
             </div>
 
@@ -375,8 +168,8 @@ export default function Dashboard() {
             </div>
           </aside>
 
-          {/* CENTRAL CONTENT (Slideshow & Chat) */}
-          <section className="md:col-span-6 space-y-6">
+          {/* CENTER SECTION */}
+          <section className="md:col-span-6 space-y-6 text-center">
             <div className="bg-white p-4 rounded-[3.5rem] shadow-2xl border-[16px] border-white h-[450px] relative overflow-hidden group">
               <div onClick={() => setIsZoomed(!isZoomed)} className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-200 cursor-pointer">
                 <Image src={`/memories/pic${currentPic}.jpg`} alt="Memory" fill priority className={`transition-all duration-1000 ${isZoomed ? 'object-cover object-top' : 'object-contain scale-95'}`} />
@@ -387,35 +180,35 @@ export default function Dashboard() {
               </div>
             </div>
 
+            <Link href="/memories" className={`inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white border-2 ${currentTheme.border} ${currentTheme.text} font-black uppercase text-[10px] tracking-[0.3em] shadow-lg hover:scale-105 transition-all active:scale-95 group`}>
+              <span>Explore Gallery</span>
+              <span className="group-hover:translate-x-1 transition-transform">✨</span>
+            </Link>
+
+            {/* CHAT SECTION WITH INITIAL MESSAGES */}
             <div className="bg-white rounded-[2.5rem] shadow-xl p-4 h-[260px] flex flex-col border border-slate-50">
               <div className="flex-1 overflow-y-auto p-2 space-y-3 no-scrollbar">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium animate-reveal ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
+                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
                   </div>
                 ))}
                 <div ref={chatEndRef} />
               </div>
-              <form onSubmit={(e) => { e.preventDefault(); if (inputText.trim()) setMessages([...messages, { id: Date.now(), sender: 'me', text: inputText }]); setInputText(''); }} className="flex gap-2 mt-2 p-2 bg-slate-50 rounded-2xl">
-                <input value={inputText} onChange={(e) => setInputText(e.target.value)} type="text" placeholder="Send a note..." className="flex-1 bg-transparent px-4 outline-none text-sm font-medium text-slate-600" />
+              <form onSubmit={sendMessage} className="flex gap-2 mt-2 p-2 bg-slate-50 rounded-2xl">
+                <input value={inputText} onChange={(e) => setInputText(e.target.value)} type="text" placeholder="Type here..." className="flex-1 bg-transparent px-4 outline-none text-sm font-medium text-slate-600" />
                 <button type="submit" className={`w-10 h-10 ${currentTheme.chat} text-white rounded-xl hover:scale-110 transition-transform cursor-pointer shadow-md`}>➔</button>
               </form>
             </div>
           </section>
 
-          {/* PULSE & NICKNAMES */}
+          {/* RIGHT ASIDE */}
           <aside className="md:col-span-3 space-y-6">
             <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl text-center">
                <div className="space-y-4">
-                  <div>
-                     <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Local</p>
-                     <p className="text-2xl font-black">{timeHome}</p>
-                  </div>
+                  <div className="flex justify-between items-center"><p className="text-[10px] font-black opacity-40 uppercase">Local</p><p className="text-2xl font-black">{timeHome}</p></div>
                   <div className="h-[1px] bg-white/10 w-full"></div>
-                  <div>
-                     <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest">Her</p>
-                     <p className="text-2xl font-black">{timeAway}</p>
-                  </div>
+                  <div className="flex justify-between items-center"><p className="text-[10px] font-black text-amber-300 uppercase">Her</p><p className="text-2xl font-black">{timeAway}</p></div>
                </div>
             </div>
 
@@ -423,15 +216,11 @@ export default function Dashboard() {
                <h3 className="text-[10px] font-black tracking-widest text-slate-400 mb-6 text-center uppercase">Today's Pulse</h3>
                <div className="space-y-6">
                   <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
-                        <Image src="/memories/me.jpg" alt="Me" fill className="object-cover" />
-                     </div>
+                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2"><Image src="/memories/me.jpg" alt="Me" fill className="object-cover" /></div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Topher ✨</p>
                   </div>
                   <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
-                        <Image src="/memories/her.jpg" alt="Her" fill className="object-cover" />
-                     </div>
+                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2"><Image src="/memories/her.jpg" alt="Her" fill className="object-cover" /></div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Annabel 🌸</p>
                   </div>
                </div>
@@ -440,43 +229,5 @@ export default function Dashboard() {
         </div>
       </div>
     </main>
->>>>>>> bd290722d50b718ed1c664097b687523b964a134
-  );
-}
-
-// Countdown & other helpers if needed
-
-function MemberAvatar({ uid }) {
-  const [member, setMember] = useState(null);
-
-  useEffect(() => {
-    const fetchMember = async () => {
-      const docSnap = await getDoc(doc(db, "users", uid));
-      if (docSnap.exists()) setMember(docSnap.data());
-    };
-    fetchMember();
-  }, [uid]);
-
-  if (!member) return null;
-  return (
-    <img
-      src={member.photoURL}
-      alt={member.name}
-      title={member.name}
-      className="w-12 h-12 rounded-full"
-    />
-  );
-}
-
-// Simple Calendar component
-function Calendar() {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  return (
-    <input
-      type="date"
-      value={date}
-      onChange={(e) => setDate(e.target.value)}
-      className="border px-3 py-2 rounded w-full"
-    />
   );
 }

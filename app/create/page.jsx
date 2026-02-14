@@ -9,6 +9,7 @@ export default function CreateSpace() {
   const [locations, setLocations] = useState({ home: '', away: '' });
   const [reunionDate, setReunionDate] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
+  const [copied, setCopied] = useState(false); // New state for copy feedback
 
   // Generate a random code when the user reaches the final step
   useEffect(() => {
@@ -17,6 +18,13 @@ export default function CreateSpace() {
       setGeneratedCode(code);
     }
   }, [step]);
+
+  // New function to handle copying
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -80,11 +88,17 @@ export default function CreateSpace() {
               <h2 className="text-3xl font-black tracking-tight">Space Created!</h2>
               <p className="text-slate-500 font-medium leading-relaxed">Share this code with your partner so they can join you.</p>
               
-              <div className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl mt-4">
+              {/* UPDATED CODE BOX WITH COPY FUNCTION */}
+              <div 
+                onClick={handleCopy}
+                className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl mt-4 cursor-pointer hover:bg-amber-100 transition-all active:scale-95 group relative"
+              >
                 <span className="text-4xl font-black tracking-widest text-amber-600 select-all font-mono">
                   {generatedCode || 'BEYOND26'}
                 </span>
-                <p className="text-[10px] text-amber-400 mt-2 font-bold uppercase tracking-wider">Click to copy code</p>
+                <p className="text-[10px] text-amber-400 mt-2 font-bold uppercase tracking-wider">
+                  {copied ? '✅ Code Copied!' : 'Click to copy code'}
+                </p>
               </div>
 
               <Link href="/dashboard">
