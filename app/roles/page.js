@@ -65,13 +65,13 @@ export default function RoleSelection() {
             </button>
           </Link>
           
-          <Link href="/login" className="flex-1 cursor-pointer">
-            <button className="w-full py-6 rounded-2xl bg-white border-2 border-slate-100 text-slate-600 font-black text-xl hover:bg-slate-50 transition-all cursor-pointer">
-              Join Space
-            </button>
-          </Link>
-        </div>
-      )}
+          <Link href="/join" className="flex-1 cursor-pointer">
+      <button className="w-full py-6 rounded-2xl bg-white border-2 border-slate-100 text-slate-600 font-black text-xl hover:bg-slate-50 transition-all cursor-pointer">
+        Join Space
+      </button>
+    </Link>
+  </div>
+)}
 
     </main>
   );
