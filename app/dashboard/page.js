@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [herPhoto, setHerPhoto] = useState('/memories/her.jpg');
   const chatEndRef = useRef(null);
 
-  // Expanded Theme Object to control the Schedule Card colors
+  // Themes with Card backgrounds for the Schedule
   const themes = {
     rose: { 
       bg: "bg-[#FFF0F3]", border: "border-rose-200", text: "text-rose-700", title: "text-rose-950", 
@@ -56,7 +56,7 @@ export default function Dashboard() {
   return (
     <main className={`flex min-h-screen ${currentTheme.bg} transition-all duration-500 ease-in-out`}>
       
-      {/* SIDEBAR */}
+      {/* SIDEBAR: "My Spaces" Navigation */}
       <aside className={`transition-all duration-500 ease-in-out bg-white/40 backdrop-blur-2xl border-r border-white/20 flex flex-col p-4 sticky top-0 h-screen shadow-xl ${isSidebarExpanded ? 'w-72' : 'w-24'}`}>
         <button onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} className="flex flex-col gap-1.5 p-2 mb-10 cursor-pointer group w-fit">
           <div className={`h-0.5 w-6 bg-slate-800 transition-all ${isSidebarExpanded ? 'rotate-45 translate-y-2' : ''}`} />
@@ -72,21 +72,22 @@ export default function Dashboard() {
         </div>
 
         <nav className="flex-1 space-y-2">
-          {['Dashboard', 'Memories', 'Settings'].map((item) => (
+          {/* Replaced Dashboard with My Spaces */}
+          {['My Spaces', 'Memories', 'Settings'].map((item) => (
             <button key={item} className={`flex items-center gap-4 w-full px-3 py-3 rounded-xl hover:bg-white/60 transition-all font-bold text-sm ${currentTheme.text} ${!isSidebarExpanded && 'justify-center'}`}>
-              <span className="text-xl">{item === 'Dashboard' ? '🏡' : item === 'Memories' ? '✨' : '⚙️'}</span>
+              <span className="text-xl">{item === 'My Spaces' ? '🚀' : item === 'Memories' ? '✨' : '⚙️'}</span>
               {isSidebarExpanded && <span>{item}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex-1 p-8">
         <header className="flex justify-between items-center mb-10 max-w-6xl mx-auto">
           <div>
             <h1 className={`font-romantic italic font-black text-5xl tracking-tight ${currentTheme.title}`}>The Chaos Corner</h1>
-            <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>5.5 Hours Apart • Connected ❤️</p>
+            <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>Connected with Annabel ❤️</p>
           </div>
 
           <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-3 rounded-3xl border border-white shadow-lg">
@@ -99,7 +100,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-6xl mx-auto pb-10">
           
-          {/* CALENDAR & SYNCED SCHEDULE */}
+          {/* TIMELINE & THEME-SYNCED SCHEDULE */}
           <aside className="md:col-span-3 space-y-6">
             <div className={`bg-white p-6 rounded-[2.5rem] border ${currentTheme.border} shadow-2xl relative z-10`}>
               <h3 className={`font-romantic italic text-xl mb-4 text-center ${currentTheme.text}`}>Our Timeline</h3>
@@ -108,17 +109,17 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-7 gap-1 mb-8">
                 {[...Array(31)].map((_, i) => (
-                  <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80`}`}>{i + 1}</div>
+                  <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80 hover:bg-slate-50`}`}>{i + 1}</div>
                 ))}
               </div>
               
-              {/* FIXED & COLOR-SYNCED SCHEDULE CARD */}
+              {/* THEME-SYNCED SCHEDULE CARD */}
               <div className={`p-4 rounded-2xl border-l-8 transition-colors duration-500 ${currentTheme.card} shadow-sm`}>
                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🍿</span>
-                    <p className="text-[10px] font-black opacity-50 uppercase tracking-tighter">Netflix Night</p>
+                    <p className="text-[10px] font-black opacity-50 uppercase tracking-tighter">Schedule</p>
                  </div>
-                 <p className={`text-sm font-bold ${currentTheme.text}`}>Stranger Things</p>
+                 <p className={`text-sm font-bold ${currentTheme.text}`}>Netflix & Chill Night</p>
               </div>
             </div>
 
@@ -128,7 +129,7 @@ export default function Dashboard() {
             </div>
           </aside>
 
-          {/* GALLERY & CHAT */}
+          {/* CENTRAL CONTENT (Slideshow & Chat) */}
           <section className="md:col-span-6 space-y-6">
             <div className="bg-white p-4 rounded-[3.5rem] shadow-2xl border-[16px] border-white h-[450px] relative overflow-hidden group">
               <div onClick={() => setIsZoomed(!isZoomed)} className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-200 cursor-pointer">
@@ -156,17 +157,17 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* RIGHT ASIDE (Clocks & Pulse) */}
+          {/* PULSE & NICKNAMES */}
           <aside className="md:col-span-3 space-y-6">
             <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl text-center">
                <div className="space-y-4">
                   <div>
-                     <p className="text-[10px] font-black opacity-40 uppercase">Local</p>
+                     <p className="text-[10px] font-black opacity-40 uppercase tracking-widest">Local</p>
                      <p className="text-2xl font-black">{timeHome}</p>
                   </div>
                   <div className="h-[1px] bg-white/10 w-full"></div>
                   <div>
-                     <p className="text-[10px] font-black text-amber-300 uppercase">Her</p>
+                     <p className="text-[10px] font-black text-amber-300 uppercase tracking-widest">Her</p>
                      <p className="text-2xl font-black">{timeAway}</p>
                   </div>
                </div>
