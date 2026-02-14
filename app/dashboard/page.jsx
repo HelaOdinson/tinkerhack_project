@@ -24,27 +24,40 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    const fetchGroup = async () => {
-      const user = auth.currentUser;
-      if (!user) return router.push("/login");
+  const fetchGroup = async () => {
+    const user = auth.currentUser;
+    if (!user) return router.push("/login");
 
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-      const groupId = userSnap.data()?.groupId;
-      if (!groupId) return router.push("/role");
+    const userSnap = await getDoc(doc(db, "users", user.uid));
 
-      const groupSnap = await getDoc(doc(db, "groups", groupId));
-      if (!groupSnap.exists()) return router.push("/role");
+    // Check if user doc exists
+    if (!userSnap.exists()) {
+      console.log("User doc does not exist, redirecting to role page...");
+      return router.push("/role");
+    }
 
-      const data = groupSnap.data();
-      setGroup({ ...data, groupId });
-      setGroupName(data.groupName);
-      setMeetDate(data.meetDate || "");
-      setMemories(data.memories || []);
-      setLoading(false);
-    };
+    const userData = userSnap.data();
+    const groupId = userData?.groupId;
 
-    fetchGroup();
-  }, []);
+    if (!groupId) return router.push("/role");
+
+    const groupSnap = await getDoc(doc(db, "groups", groupId));
+    if (!groupSnap.exists()) {
+        console.log("Group doc missing, redirecting to /role");
+        return router.push("/role");
+    }
+
+    const data = groupSnap.data();
+    setGroup({ ...data, groupId });
+    setGroupName(data.groupName);
+    setMeetDate(data.meetDate || "");
+    setMemories(data.memories || []);
+    setLoading(false);
+  };
+
+  fetchGroup();
+}, []);
+
 
   // Update group name
   const updateGroupName = async () => {
@@ -82,12 +95,13 @@ export default function DashboardPage() {
     setUploading(false);
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading || !group) return <div>Loading...</div>;
 
   return (
     <div className="p-8 font-sans text-gray-900">
       {/* Header */}
       <h1 className="text-3xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-rose-400 to-amber-400">
+        {group.groupName}
         Dashboard
       </h1>
 
