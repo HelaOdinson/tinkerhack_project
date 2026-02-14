@@ -15,6 +15,7 @@ export default function CreateSpace() {
   const [locations, setLocations] = useState({ home: '', away: '' });
   const [reunionDate, setReunionDate] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
+<<<<<<< HEAD
   const [distance, setDistance] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -79,10 +80,14 @@ export default function CreateSpace() {
     else if (step === 4 && reunionDate) {
       const user = auth.currentUser;
       if (!user) return alert("Not logged in");
+=======
+  const [copied, setCopied] = useState(false); // New state for copy feedback
+>>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
 
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       setGeneratedCode(code);
 
+<<<<<<< HEAD
       const newSpace = {
         id: crypto.randomUUID(),
         role,
@@ -109,6 +114,20 @@ export default function CreateSpace() {
     await navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+=======
+  // New function to handle copying
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generatedCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (step === 1 && spaceName) setStep(2);
+    if (step === 3 && locations.home && locations.away) setStep(4);
+    if (step === 4 && reunionDate) setStep(5);
+>>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
   };
 
   return (
@@ -192,6 +211,7 @@ export default function CreateSpace() {
           )}
 
           {step === 5 && (
+<<<<<<< HEAD
             <div className="text-center space-y-6 relative">
               <div className="text-6xl">🎉</div>
               <h2 className="text-3xl font-black">Space Created!</h2>
@@ -207,6 +227,23 @@ export default function CreateSpace() {
                 </span>
                 <p className="text-xs mt-2 font-bold uppercase">
                   Click to copy code
+=======
+            <div className="text-center space-y-6 animate-reveal">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-3xl font-black tracking-tight">Space Created!</h2>
+              <p className="text-slate-500 font-medium leading-relaxed">Share this code with your partner so they can join you.</p>
+              
+              {/* UPDATED CODE BOX WITH COPY FUNCTION */}
+              <div 
+                onClick={handleCopy}
+                className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl mt-4 cursor-pointer hover:bg-amber-100 transition-all active:scale-95 group relative"
+              >
+                <span className="text-4xl font-black tracking-widest text-amber-600 select-all font-mono">
+                  {generatedCode || 'BEYOND26'}
+                </span>
+                <p className="text-[10px] text-amber-400 mt-2 font-bold uppercase tracking-wider">
+                  {copied ? '✅ Code Copied!' : 'Click to copy code'}
+>>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
                 </p>
               </div>
 
