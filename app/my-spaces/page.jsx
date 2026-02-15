@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -28,68 +28,114 @@ export default function MySpaces() {
       } catch (error) {
         console.error("Error fetching spaces:", error);
       }
-
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
+  const handleDelete = async (e, spaceId) => {
+    e.stopPropagation(); // Prevents navigating to dashboard when clicking delete
+    if (!confirm("Remove this space from your list?")) return;
+
+    try {
+      const user = auth.currentUser;
+      const updatedSpaces = spaces.filter(s => s.id !== spaceId);
+      
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        spaces: updatedSpaces
+      });
+
+      setSpaces(updatedSpaces);
+    } catch (error) {
+      console.error("Error deleting space:", error);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#FFFDFB] text-slate-800 font-sans p-10">
       
-      {/* Heading */}
-      <div className="mb-12">
-        <h1 className="text-5xl font-black italic text-slate-800 mb-3">
-          My Spaces
-        </h1>
-        <p className="text-slate-500 font-medium">
-          All the little worlds you’ve created ✨
-        </p>
+      {/* 1. HEADER AREA */}
+      <div className="max-w-7xl mx-auto mb-16 flex justify-between items-start">
+        <div>
+          <h1 className="text-5xl font-black italic text-slate-900 mb-3 tracking-tighter">
+            My Spaces
+          </h1>
+          <p className="text-slate-500 font-medium uppercase text-[10px] tracking-[0.3em]">
+            Your connected universes ✨
+          </p>
+        </div>
+
+        {/* Global Plus Button returning to /roles */}
+        <button 
+          onClick={() => router.push('/roles')}
+          className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center text-3xl shadow-2xl hover:scale-110 hover:bg-rose-500 transition-all cursor-pointer border-4 border-white"
+        >
+          +
+        </button>
       </div>
 
       {loading && (
-        <p className="text-slate-400">Loading your spaces...</p>
+        <div className="max-w-7xl mx-auto py-20 text-center animate-pulse">
+            <p className="font-black text-slate-300 uppercase tracking-widest text-xs">Syncing your worlds...</p>
+        </div>
       )}
 
-      {/* Grid */}
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+      {/* 2. SPACES GRID */}
+      <div className="max-w-7xl mx-auto grid gap-10 md:grid-cols-2 lg:grid-cols-3">
 
-        {/* Existing Spaces */}
         {spaces.map((space) => (
           <div
             key={space.id}
             onClick={() => router.push(`/dashboard/${space.id}`)}
-            className="cursor-pointer bg-white border border-rose-100 rounded-3xl p-8 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+            className="group relative cursor-pointer bg-white border border-rose-50 rounded-[2.5rem] p-10 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 overflow-hidden"
           >
-            <h2 className="text-2xl font-black text-slate-800 mb-2">
-              {space.spaceName}
-            </h2>
+            {/* Delete Button (×) */}
+            <button 
+              onClick={(e) => handleDelete(e, space.id)}
+              className="absolute top-8 right-8 w-8 h-8 rounded-full bg-slate-50 text-slate-300 flex items-center justify-center font-bold hover:bg-rose-100 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100 z-10"
+            >
+              ×
+            </button>
 
-            <p className="text-rose-400 font-bold mb-4">
-              {space.role}
-            </p>
-
-            <div className="space-y-1 text-slate-500 text-sm">
-              <p>📍 {space.homeCity} → {space.awayCity}</p>
-              <p>📏 {space.distance} km apart</p>
-              <p>🗓 Reunion: {space.reunionDate}</p>
+            <div className="flex justify-between items-start mb-6">
+               <h2 className="text-2xl font-black text-slate-900 truncate pr-6 leading-tight">
+                 {space.spaceName}
+               </h2>
             </div>
 
-            <div className="mt-6 inline-block bg-amber-50 border border-amber-200 px-4 py-2 rounded-2xl font-mono text-amber-600 font-bold tracking-widest text-sm">
-              {space.joinCode}
+            <div className="inline-block bg-rose-50 px-4 py-1 rounded-full mb-6">
+                <p className="text-rose-400 font-black uppercase text-[9px] tracking-widest">
+                {space.role}
+                </p>
+            </div>
+
+            <div className="space-y-3 text-slate-500 text-sm font-semibold">
+              <p className="flex items-center gap-3">📍 <span className="truncate">{space.homeCity} → {space.awayCity}</span></p>
+              <p className="flex items-center gap-3">📏 {space.distance} KM APART</p>
+              <p className="flex items-center gap-3">🗓 {space.reunionDate || "No Date Set"}</p>
+            </div>
+
+            <div className="mt-10 pt-8 border-t border-slate-50 flex justify-between items-center">
+               <div className="bg-amber-50 border border-amber-200 px-4 py-2 rounded-2xl font-mono text-amber-600 font-black tracking-widest text-xs">
+                 {space.joinCode}
+               </div>
+               <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center group-hover:bg-rose-500 transition-all shadow-lg group-hover:shadow-rose-200">
+                  ➔
+               </div>
             </div>
           </div>
         ))}
 
-        {/* Add New Space Card */}
+        {/* Create Card returning to /roles */}
         <div
           onClick={() => router.push('/roles')}
-          className="cursor-pointer flex items-center justify-center rounded-3xl border-2 border-dashed border-rose-200 bg-white/40 backdrop-blur-sm hover:bg-rose-50 transition-all duration-300 min-h-[250px]"
+          className="cursor-pointer flex items-center justify-center rounded-[2.5rem] border-4 border-dashed border-rose-100 bg-white/40 hover:bg-rose-50 hover:border-rose-300 transition-all duration-500 min-h-[350px] group"
         >
-          <div className="text-center">
-            <div className="text-6xl font-black text-rose-300 mb-3">+</div>
-            <p className="text-slate-400 font-bold">
+          <div className="text-center group-hover:scale-110 transition-transform">
+            <div className="text-7xl font-black text-rose-200 mb-4">+</div>
+            <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">
               Create New Space
             </p>
           </div>

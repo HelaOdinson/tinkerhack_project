@@ -7,13 +7,21 @@ export default function RoleSelection() {
   const [customRole, setCustomRole] = useState('');
 
   const roles = [
-    { id: 'partner', label: 'Girlfriend / Boyfriend', icon: '❤️' },
-    { id: 'friend', label: 'Friend', icon: '🤝' },
-    { id: 'sibling', label: 'Siblings', icon: '🧒' },
-    { id: 'family', label: 'Family', icon: '🏠' },
+    { id: 'Couple', label: 'Girlfriend / Boyfriend', icon: '❤️' },
+    { id: 'Friends', label: 'Friend', icon: '🤝' },
+    { id: 'HouseFamily', label: 'Family', icon: '🏠' },
+    { id: 'Custom', label: 'Others', icon: '✨' },
   ];
 
-  const finalRole = selectedRole === 'custom' ? customRole : selectedRole;
+  // Helper to ensure the role string is consistently formatted
+  const getFinalRole = () => {
+    if (selectedRole === 'custom') {
+      return customRole.trim() || 'Custom';
+    }
+    return selectedRole;
+  };
+
+  const finalRole = getFinalRole();
 
   return (
     <main className="min-h-screen bg-[#FFFDFB] text-slate-800 font-sans p-6 flex flex-col items-center justify-center">
@@ -30,14 +38,14 @@ export default function RoleSelection() {
 
       {/* 2. ROLE GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl w-full mb-8">
-        {roles.map((role, index) => (
+        {roles.map((role) => (
           <button
             key={role.id}
             onClick={() => {
               setSelectedRole(role.id);
               setCustomRole('');
             }}
-            className={`p-6 rounded-2xl border-2 transition-all duration-300 flex items-center gap-4 animate-reveal delay-${(index + 1) * 100} ${
+            className={`p-6 rounded-2xl border-2 transition-all duration-300 flex items-center gap-4 animate-reveal ${
               selectedRole === role.id
                 ? 'border-rose-400 bg-rose-50/50 shadow-md scale-[1.02]'
                 : 'border-slate-100 bg-white hover:border-amber-200 cursor-pointer'
@@ -52,7 +60,7 @@ export default function RoleSelection() {
 
         {/* CUSTOM OPTION */}
         <div
-          className={`p-6 rounded-2xl border-2 bg-white flex flex-col gap-2 animate-reveal delay-500 transition-all ${
+          className={`p-6 rounded-2xl border-2 bg-white flex flex-col gap-2 animate-reveal transition-all ${
             selectedRole === 'custom'
               ? 'border-amber-400 shadow-md'
               : 'border-slate-100'
@@ -75,31 +83,33 @@ export default function RoleSelection() {
       </div>
 
       {/* 3. CREATE OR JOIN OPTIONS */}
-      {finalRole && (
+      {selectedRole && (
         <div className="flex flex-col md:flex-row gap-4 w-full max-w-2xl animate-reveal">
           
-          {/* 🔥 UPDATED LINK — PASSES ROLE */}
+          {/* CREATE BUTTON */}
           <Link
             href={{
               pathname: "/create",
               query: { role: finalRole },
             }}
-            className="flex-1 cursor-pointer"
+            className="flex-1"
           >
-            <button className="w-full py-6 rounded-2xl bg-gradient-to-r from-rose-400 to-amber-400 text-white font-black text-xl shadow-xl hover:scale-105 transition-all cursor-pointer">
+            <button className="w-full py-6 rounded-2xl bg-gradient-to-r from-rose-400 to-amber-400 text-white font-black text-xl shadow-xl hover:scale-105 transition-all cursor-pointer uppercase tracking-tight">
               Create Space
             </button>
           </Link>
 
-          <Link href="/join" className="flex-1 cursor-pointer">
-            <button 
-  type="submit"
-  disabled={inviteCode.length < 4 || loading}
-  className="w-full py-5 rounded-2xl bg-gradient-to-r from-rose-400 to-amber-400 text-white font-black text-xl hover:scale-105 transition-all shadow-xl disabled:opacity-50"
->
-  {loading ? "Joining..." : "Enter Space"}
-</button>
-
+          {/* 🔥 FIXED JOIN BUTTON — NOW PASSES ROLE */}
+          <Link 
+            href={{
+              pathname: "/join",
+              query: { role: finalRole },
+            }} 
+            className="flex-1"
+          >
+            <button className="w-full py-6 rounded-2xl bg-slate-900 text-white font-black text-xl shadow-xl hover:scale-105 transition-all cursor-pointer uppercase tracking-tight">
+              Join Space
+            </button>
           </Link>
         </div>
       )}

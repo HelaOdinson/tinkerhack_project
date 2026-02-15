@@ -7,7 +7,7 @@ import { collection, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firesto
 export default function CreateSpace() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const role = searchParams.get('role');
+  const role = searchParams.get('role') || 'Couple'; // Default to Couple if not found
 
   const [step, setStep] = useState(1);
   const [spaceName, setSpaceName] = useState('');
@@ -75,6 +75,14 @@ export default function CreateSpace() {
         Math.random().toString(36).substring(2, 8).toUpperCase();
       setGeneratedCode(code);
 
+      // --- TEMPLATE LOGIC: Set defaults based on the chosen role ---
+      const defaultThemes = {
+        Couple: 'rose',
+        Friends: 'blue',
+        HouseFamily: 'green',
+        Custom: 'slate'
+      };
+
       const newSpace = {
         id: code,
         role,
@@ -89,12 +97,22 @@ export default function CreateSpace() {
         ownerId: user.uid,
         members: [user.uid],
         createdAt: new Date().toISOString(),
+        // Add the settings block that the [id] dashboard expects
+        settings: {
+          theme: defaultThemes[role] || 'rose',
+          backgroundImage: null,
+          tagline: role === 'Couple' ? "Connected ❤️" : "Basecamp ✨"
+        }
       };
 
       try {
+        // Save to central spaces collection
         await addDoc(collection(db, 'spaces'), newSpace);
+        
+        // Save to user's personal spaces array
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, { spaces: arrayUnion(newSpace) });
+        
         setStep(5);
       } catch (err) {
         console.error(err);
@@ -145,7 +163,7 @@ export default function CreateSpace() {
                   key={v}
                   type="button"
                   onClick={() => { setVibe(v); setStep(3); }}
-                  className={`w-full p-4 rounded-2xl border text-left ${gradientBtn} hover:opacity-90 transition-all`}
+                  className={`w-full p-4 rounded-2xl border text-left bg-white border-slate-200 hover:border-amber-400 transition-all font-bold text-slate-800`}
                 >
                   {v}
                 </button>
@@ -195,26 +213,26 @@ export default function CreateSpace() {
             <div className="text-center space-y-6 relative">
               <div className="text-6xl">🎉</div>
               <h2 className="text-3xl font-black text-slate-900">Space Created!</h2>
-              <p className="text-slate-900">Distance: {distance} km | Time Diff: {timeDiff} h</p>
+              <p className="text-slate-900 font-medium tracking-tight">Distance: {distance} km | Time Diff: {timeDiff} h</p>
 
               <div
                 onClick={copyToClipboard}
-                className={`cursor-pointer p-6 rounded-3xl border-2 border-dashed ${gradientBtn} hover:opacity-90 transition`}
+                className={`cursor-pointer p-6 rounded-3xl border-2 border-dashed border-rose-400 bg-rose-50 hover:bg-rose-100 transition-all`}
               >
-                <span className="text-4xl font-black tracking-widest font-mono">{generatedCode}</span>
-                <p className="text-xs mt-2 font-bold uppercase text-slate-900">Click to copy code</p>
+                <span className="text-4xl font-black tracking-widest font-mono text-rose-600">{generatedCode}</span>
+                <p className="text-xs mt-2 font-bold uppercase text-rose-400">Click to copy code</p>
               </div>
 
               {copied && (
-                <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-2 rounded-xl shadow-lg">
-                  Copied to clipboard!
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg text-xs font-bold">
+                  Copied!
                 </div>
               )}
 
               <button
                 type="button"
                 onClick={() => router.push(`/dashboard/${generatedCode}`)}
-                className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all text-slate-900 font-black text-xl`}
+                className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all text-slate-900 font-black text-xl shadow-xl shadow-rose-200`}
               >
                 Enter Space
               </button>
