@@ -1,4 +1,5 @@
 'use client';
+// 1. Added 'use' to the imports to correctly unwrap params
 import { use, useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,12 +11,15 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// 🔥 THIS IS THE CRITICAL ADDITION TO AVOID THE ERROR
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 function DashboardContent({ spaceId }) {
   const router = useRouter();
   const searchParams = useSearchParams(); 
   const scrollRef = useRef(null);
 
-  // --- STATES ---
   const [mounted, setMounted] = useState(false);
   const [spaceData, setSpaceData] = useState(null);
   const [membersDetails, setMembersDetails] = useState([]); 
@@ -123,11 +127,9 @@ function DashboardContent({ spaceId }) {
 
   const theme = themes[spaceData?.settings?.theme || 'rose'];
   const config = roleConfigs[spaceData?.role || 'Couple'];
-  const isOwner = spaceData?.ownerId === auth.currentUser?.uid;
 
   return (
     <main className={`flex min-h-screen ${theme.bg} relative overflow-hidden text-slate-800 font-sans`}>
-      {/* SIDEBAR */}
       <aside className={`transition-all duration-500 bg-white/60 backdrop-blur-xl border-r border-white/20 flex flex-col p-6 sticky top-0 h-screen z-50 ${isSidebarOpen ? 'w-72' : 'w-24'}`}>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="mb-12 h-10 w-10 flex items-center justify-center hover:bg-slate-100 rounded-xl cursor-pointer">
           {isSidebarOpen ? '✕' : '☰'}
@@ -148,7 +150,6 @@ function DashboardContent({ spaceId }) {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* LEFT: CALENDAR & REUNION */}
             <aside className="lg:col-span-3 space-y-6">
               <div className={`bg-white p-6 rounded-[2.5rem] border ${theme.card} shadow-xl`}>
                 <div className="grid grid-cols-7 gap-1 mb-4 text-[10px] font-black text-center text-slate-400 uppercase">
@@ -164,7 +165,6 @@ function DashboardContent({ spaceId }) {
               </div>
             </aside>
 
-            {/* CENTER: GLIMPSES & CHAT */}
             <section className="lg:col-span-6 space-y-8">
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-3">
@@ -180,7 +180,6 @@ function DashboardContent({ spaceId }) {
                 </div>
               </div>
 
-              {/* REAL-TIME CHAT */}
               <div className="bg-white rounded-[2.5rem] shadow-xl p-6 h-[300px] flex flex-col">
                 <div ref={scrollRef} className="flex-1 overflow-y-auto mb-4 space-y-3 p-2 no-scrollbar">
                   {messages.map((msg) => (
@@ -198,7 +197,6 @@ function DashboardContent({ spaceId }) {
               </div>
             </section>
 
-            {/* RIGHT: CLOCKS & GAP */}
             <aside className="lg:col-span-3 space-y-6">
               <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl text-center space-y-6">
                 <div><p className="text-[9px] font-black opacity-60 uppercase tracking-widest">Local Time</p><p className="text-2xl font-black">{timeHome}</p></div>
@@ -215,7 +213,7 @@ function DashboardContent({ spaceId }) {
                   <div className={`absolute left-0 w-3 h-3 rounded-full border-2 border-white ${theme.accent}`} />
                   <div className="absolute right-0 w-3 h-3 rounded-full border-2 border-white bg-amber-400" />
                 </div>
-                <p className="text-xs font-black text-center mt-4 text-slate-900 uppercase">
+                <p className="text-xs font-black text-igtter mt-4 text-slate-900 uppercase">
                   {spaceData.distance ? `${spaceData.distance} KM APART` : "..."}
                 </p>
               </div>
@@ -229,6 +227,7 @@ function DashboardContent({ spaceId }) {
 
 // 🔥 EXPORT WRAPPED IN SUSPENSE
 export default function SmartDashboard({ params }) {
+  // Use 'use' to safely unwrap the dynamic params for Next.js Client Components
   const resolvedParams = use(params);
   const spaceId = resolvedParams?.id;
 
