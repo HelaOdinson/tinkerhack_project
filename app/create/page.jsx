@@ -1,13 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
-export const dynamic = 'force-dynamic';
-
-
-export default function CreateSpace() {
+function CreateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const role = searchParams.get('role') || 'Couple';
@@ -75,8 +72,8 @@ export default function CreateSpace() {
         vibe,
         homeCity: locations.home,
         awayCity: locations.away,
-        distance, // 🔥 This is now passed to the DB
-        timeDiff, // 🔥 This is now passed to the DB
+        distance,
+        timeDiff,
         reunionDate,
         members: [user.uid],
         ownerId: user.uid,
@@ -146,5 +143,13 @@ export default function CreateSpace() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function CreateSpace() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-black uppercase">Loading Setup...</div>}>
+      <CreateForm />
+    </Suspense>
   );
 }
