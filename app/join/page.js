@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
+export const dynamic = 'force-dynamic';
+
+
 export default function JoinSpace() {
   const router = useRouter();
   const searchParams = useSearchParams();

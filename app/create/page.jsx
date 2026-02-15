@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
+export const dynamic = 'force-dynamic';
+
+
 export default function CreateSpace() {
   const router = useRouter();
   const searchParams = useSearchParams();
