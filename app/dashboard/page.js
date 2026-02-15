@@ -1,10 +1,15 @@
 'use client';
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function Dashboard() {
+// 🔥 FORCE DYNAMIC: This tells the Render/Vercel build engine to skip 
+// static generation for this page, which prevents the "prerender-error".
+export const dynamic = 'force-dynamic';
+
+// --- LOGIC COMPONENT ---
+function DashboardContent() {
   const searchParams = useSearchParams();
   const spaceId = searchParams.get("space");
   const [theme, setTheme] = useState('rose');
@@ -57,42 +62,33 @@ export default function Dashboard() {
 
   return (
     <main className={`flex min-h-screen ${currentTheme.bg} transition-all duration-500 ease-in-out`}>
-      
       {/* SIDEBAR */}
       <aside className={`transition-all duration-500 ease-in-out bg-white/40 backdrop-blur-2xl border-r border-white/20 flex flex-col p-4 sticky top-0 h-screen shadow-xl relative ${isSidebarExpanded ? 'w-72' : 'w-24'}`}>
-        
-        {/* PINNED TOGGLE BUTTON */}
         <div className="h-12 w-full flex items-center mb-10 relative"> 
-          <button 
-            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} 
-            className="absolute left-1/2 -translate-x-1/2 h-6 w-6 cursor-pointer group z-50"
-          >
+          <button onClick={() => setIsSidebarExpanded(!isSidebarExpanded)} className="absolute left-1/2 -translate-x-1/2 h-6 w-6 cursor-pointer group z-50">
             <div className={`absolute h-0.5 w-6 bg-slate-800 transition-all duration-500 ${isSidebarExpanded ? 'top-1/2 -translate-y-1/2 rotate-45' : 'top-1'}`} />
             <div className={`absolute top-1/2 -translate-y-1/2 h-0.5 w-6 bg-slate-800 transition-all duration-300 ${isSidebarExpanded ? 'opacity-0 scale-0' : 'opacity-100'}`} />
             <div className={`absolute h-0.5 w-6 bg-slate-800 transition-all duration-500 ${isSidebarExpanded ? 'top-1/2 -translate-y-1/2 -rotate-45' : 'bottom-1'}`} />
           </button>
         </div>
 
-        {/* LOGO SECTION */}
         <div className={`flex items-center gap-3 mb-10 h-10 transition-all duration-500 ${isSidebarExpanded ? 'justify-start px-4' : 'justify-center'}`}>
           <div className="relative w-10 h-10 flex-shrink-0">
             <Image src="/logo.png" alt="Logo" fill className="object-contain rotate-[-5deg]" priority />
           </div>
-          {isSidebarExpanded && <span className={`font-romantic italic font-black text-2xl ${currentTheme.title} whitespace-nowrap animate-reveal`}>BeyondMiles</span>}
+          {isSidebarExpanded && <span className={`font-romantic italic font-black text-2xl ${currentTheme.title} whitespace-nowrap`}>BeyondMiles</span>}
         </div>
 
-        {/* NAVIGATION: MEMORIES OPTION REMOVED */}
         <nav className="flex-1 space-y-2">
           {['Dashboard', 'Settings'].map((item) => (
             <button key={item} className={`flex items-center gap-4 w-full px-3 py-3 rounded-xl hover:bg-white/60 transition-all font-bold text-sm ${currentTheme.text} ${isSidebarExpanded ? 'justify-start px-4' : 'justify-center'}`}>
               <span className="text-xl flex-shrink-0 w-6 text-center">{item === 'Dashboard' ? '🏡' : '⚙️'}</span>
-              {isSidebarExpanded && <span className="animate-reveal whitespace-nowrap">{item}</span>}
+              {isSidebarExpanded && <span className="whitespace-nowrap">{item}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
       <div className="flex-1 p-8">
         <header className="flex justify-between items-center mb-10 max-w-6xl mx-auto">
           <div>
@@ -113,7 +109,6 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 max-w-6xl mx-auto pb-10">
-          
           <aside className="md:col-span-3 space-y-6">
             <div className={`bg-white p-6 rounded-[2.5rem] border ${currentTheme.border} shadow-2xl relative z-10`}>
               <h3 className={`font-romantic italic text-xl mb-4 text-center ${currentTheme.text}`}>Our Timeline</h3>
@@ -125,7 +120,6 @@ export default function Dashboard() {
                   <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80`}`}>{i + 1}</div>
                 ))}
               </div>
-              
               <div className={`p-4 rounded-2xl border-l-8 transition-colors duration-500 ${currentTheme.card} shadow-sm`}>
                  <div className="flex items-center gap-2 mb-1">
                     <span className="text-lg">🍿</span>
@@ -142,15 +136,11 @@ export default function Dashboard() {
           </aside>
 
           <section className="md:col-span-6 space-y-6 text-center">
-            {/* Main Slideshow */}
             <div className="bg-white p-4 rounded-[3.5rem] shadow-2xl border-[16px] border-white h-[450px] relative overflow-hidden group">
               <div onClick={() => setIsZoomed(!isZoomed)} className="relative w-full h-full rounded-[2.5rem] overflow-hidden bg-slate-200 cursor-pointer">
                 <Image src={`/memories/pic${currentPic}.jpg`} alt="Memory" fill priority className={`transition-all duration-1000 ${isZoomed ? 'object-cover object-top' : 'object-contain scale-95'}`} />
-                
-                {/* Fixed Indicators */}
                 <button onClick={prevPic} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 text-white font-bold opacity-0 group-hover:opacity-100 transition-all z-20">❮</button>
                 <button onClick={nextPic} className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 text-white font-bold opacity-0 group-hover:opacity-100 transition-all z-20">❯</button>
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
                 <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
                   <p className="text-white font-romantic italic text-2xl drop-shadow-lg leading-tight">Forever favorite.</p>
@@ -158,16 +148,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Link href="/memories" className={`inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white border-2 ${currentTheme.border} ${currentTheme.text} font-black uppercase text-[10px] tracking-[0.3em] shadow-lg hover:scale-105 transition-all active:scale-95 group`}>
-              <span>Explore Gallery</span>
-              <span className="group-hover:translate-x-1 transition-transform">✨</span>
-            </Link>
-
             <div className="bg-white rounded-[2.5rem] shadow-xl p-4 h-[260px] flex flex-col border border-slate-50">
-              <div className="flex-1 overflow-y-auto p-2 space-y-3 no-scrollbar">
+              <div className="flex-1 overflow-y-auto p-2 space-y-3">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium animate-reveal ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
+                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
                   </div>
                 ))}
                 <div ref={chatEndRef} />
@@ -188,26 +173,26 @@ export default function Dashboard() {
                </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50">
-               <h3 className="text-[10px] font-black tracking-widest text-slate-400 mb-6 text-center uppercase">Today's Pulse</h3>
-               <div className="space-y-6">
-                  <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
-                        <Image src="/memories/me.jpg" alt="Me" fill className="object-cover" />
-                     </div>
-                     <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Topher ✨</p>
-                  </div>
-                  <div className="text-center group">
-                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
-                        <Image src="/memories/her.jpg" alt="Her" fill className="object-cover" />
-                     </div>
-                     <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Annabel 🌸</p>
-                  </div>
-               </div>
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-slate-50 text-center">
+               <h3 className="text-[10px] font-black tracking-widest text-slate-400 mb-6 uppercase">Today's Pulse</h3>
+               <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Everything is better with you.</p>
             </div>
           </aside>
         </div>
       </div>
     </main>
+  );
+}
+
+// --- MAIN EXPORT ---
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <p className="text-rose-400 font-black animate-pulse uppercase tracking-widest">Entering Space...</p>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
