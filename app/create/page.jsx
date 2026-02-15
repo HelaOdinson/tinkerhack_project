@@ -1,12 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export default function CreateSpace() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const role = searchParams.get('role');
 
   const [step, setStep] = useState(1);
@@ -16,9 +16,9 @@ export default function CreateSpace() {
   const [reunionDate, setReunionDate] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [distance, setDistance] = useState(null);
+  const [timeDiff, setTimeDiff] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // 🌍 Get coordinates using OpenStreetMap
   const getCityCoordinates = async (cityName) => {
     try {
       const res = await fetch(
@@ -26,48 +26,34 @@ export default function CreateSpace() {
       );
       const data = await res.json();
       if (!data.length) return null;
-
-      return {
-        lat: parseFloat(data[0].lat),
-        lon: parseFloat(data[0].lon)
-      };
-    } catch (error) {
-      console.error("Geocoding error:", error);
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    } catch {
       return null;
     }
   };
 
-  // 📏 Calculate Haversine distance
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const toRad = (val) => (val * Math.PI) / 180;
-    const R = 6371; // km
-
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) ** 2;
-
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
   };
+
+  const calculateTimeDifference = (lon1, lon2) => ((lon2 - lon1) / 15).toFixed(1);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (step === 1 && spaceName) {
-      setStep(2);
-    } 
+    if (step === 1 && spaceName) setStep(2);
+    else if (step === 2 && vibe) setStep(3);
     else if (step === 3 && locations.home && locations.away) {
       const homeCoords = await getCityCoordinates(locations.home);
       const awayCoords = await getCityCoordinates(locations.away);
-
-      if (!homeCoords || !awayCoords) {
-        alert("Please enter valid city names");
-        return;
-      }
+      if (!homeCoords || !awayCoords) return alert('Enter valid cities');
 
       const dist = calculateDistance(
         homeCoords.lat,
@@ -75,58 +61,65 @@ export default function CreateSpace() {
         awayCoords.lat,
         awayCoords.lon
       );
+      const tDiff = calculateTimeDifference(homeCoords.lon, awayCoords.lon);
 
       setDistance(dist);
+      setTimeDiff(tDiff);
       setStep(4);
-    } 
-    else if (step === 4 && reunionDate) {
+    } else if (step === 4 && reunionDate) {
       const user = auth.currentUser;
-      if (!user) return alert("Please log in to save your space");
+      if (!user) return alert('Not logged in');
 
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const code =
+        window.crypto?.randomUUID?.().slice(0, 6).toUpperCase() ||
+        Math.random().toString(36).substring(2, 8).toUpperCase();
       setGeneratedCode(code);
 
       const newSpace = {
-        id: crypto.randomUUID(),
+        id: code,
         role,
         spaceName,
         vibe,
         homeCity: locations.home,
         awayCity: locations.away,
-        distance: `${distance} km`,
+        distance,
+        timeDiff,
         reunionDate,
         joinCode: code,
-        createdAt: new Date().toISOString()
+        ownerId: user.uid,
+        members: [user.uid],
+        createdAt: new Date().toISOString(),
       };
 
       try {
-        await updateDoc(doc(db, "users", user.uid), {
-          spaces: arrayUnion(newSpace)
-        });
+        await addDoc(collection(db, 'spaces'), newSpace);
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, { spaces: arrayUnion(newSpace) });
         setStep(5);
-      } catch (error) {
-        console.error("Error saving space:", error);
-        alert("Failed to create space. Please try again.");
+      } catch (err) {
+        console.error(err);
+        alert('Error creating space. Try again.');
       }
     }
   };
 
   const copyToClipboard = async () => {
+    if (!generatedCode) return;
     await navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
-    <main className="min-h-screen bg-[#FFFDFB] text-slate-800 font-sans flex items-center justify-center px-6">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-rose-50 shadow-2xl shadow-rose-100/30">
-        
-        <form onSubmit={handleSubmit}>
+  const gradientBtn = "bg-gradient-to-r from-rose-400 to-amber-400 text-slate-900 font-bold";
 
+  return (
+    <main className="min-h-screen bg-[#FFFDFB] font-sans flex items-center justify-center px-6">
+      <div className="max-w-md w-full bg-[#FFFDFB] rounded-3xl p-10 border border-[#F0EAD6] shadow-lg">
+        <form onSubmit={handleSubmit}>
           {step === 1 && (
-            <div className="space-y-6 animate-reveal">
-              <h2 className="text-3xl font-black">
-                Name your <span className="text-rose-400">space</span>.
+            <div className="space-y-6">
+              <h2 className="text-3xl font-black text-slate-900">
+                Name your <span className="text-rose-400">space</span>
               </h2>
               <input
                 autoFocus
@@ -134,17 +127,17 @@ export default function CreateSpace() {
                 placeholder="e.g., Our Little World"
                 value={spaceName}
                 onChange={(e) => setSpaceName(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-rose-200 transition-all"
+                className="w-full p-4 rounded-2xl bg-white text-slate-900 outline-none border border-slate-200"
               />
-              <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors">
+              <button type="submit" className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all`}>
                 Continue
               </button>
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6 animate-reveal">
-              <h2 className="text-3xl font-black">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-black text-slate-900">
                 What's the <span className="text-amber-400">vibe</span>?
               </h2>
               {['Romantic 🕯️', 'Playful 🧸', 'Deep 🌊'].map((v) => (
@@ -152,7 +145,7 @@ export default function CreateSpace() {
                   key={v}
                   type="button"
                   onClick={() => { setVibe(v); setStep(3); }}
-                  className="w-full p-4 rounded-2xl border border-slate-100 text-left font-bold hover:bg-slate-50 hover:border-amber-200 transition-all"
+                  className={`w-full p-4 rounded-2xl border text-left ${gradientBtn} hover:opacity-90 transition-all`}
                 >
                   {v}
                 </button>
@@ -161,73 +154,72 @@ export default function CreateSpace() {
           )}
 
           {step === 3 && (
-            <div className="space-y-6 animate-reveal">
-              <h2 className="text-3xl font-black">Where are you both?</h2>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  placeholder="Your City (e.g., Kerala)"
-                  value={locations.home}
-                  onChange={(e) => setLocations({ ...locations, home: e.target.value })}
-                  className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-slate-200"
-                />
-                <input
-                  type="text"
-                  placeholder="Their City (e.g., London)"
-                  value={locations.away}
-                  onChange={(e) => setLocations({ ...locations, away: e.target.value })}
-                  className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-slate-200"
-                />
-              </div>
-              <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold">
-                Calculate Distance
+            <div className="space-y-6">
+              <h2 className="text-3xl font-black text-slate-900">Where are you both?</h2>
+              <input
+                type="text"
+                placeholder="Your City"
+                value={locations.home}
+                onChange={(e) => setLocations({ ...locations, home: e.target.value })}
+                className="w-full p-4 rounded-2xl bg-white text-slate-900 border border-slate-200"
+              />
+              <input
+                type="text"
+                placeholder="Their City"
+                value={locations.away}
+                onChange={(e) => setLocations({ ...locations, away: e.target.value })}
+                className="w-full p-4 rounded-2xl bg-white text-slate-900 border border-slate-200"
+              />
+              <button type="submit" className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all`}>
+                Calculate Distance & Time
               </button>
             </div>
           )}
 
           {step === 4 && (
-            <div className="space-y-6 animate-reveal">
-              <h2 className="text-3xl font-black">When is the reunion?</h2>
+            <div className="space-y-6">
+              <h2 className="text-3xl font-black text-slate-900">When is the reunion?</h2>
               <input
                 type="date"
                 value={reunionDate}
                 onChange={(e) => setReunionDate(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-rose-200"
+                className="w-full p-4 rounded-2xl bg-white text-slate-900 border border-slate-200"
               />
-              <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold">
+              <button type="submit" className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all`}>
                 Finish Setup
               </button>
             </div>
           )}
 
           {step === 5 && (
-            <div className="text-center space-y-6 animate-reveal">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-3xl font-black tracking-tight">Space Created!</h2>
-              <p className="text-slate-500 font-medium">Distance: {distance} km</p>
-              
-              <div 
+            <div className="text-center space-y-6 relative">
+              <div className="text-6xl">🎉</div>
+              <h2 className="text-3xl font-black text-slate-900">Space Created!</h2>
+              <p className="text-slate-900">Distance: {distance} km | Time Diff: {timeDiff} h</p>
+
+              <div
                 onClick={copyToClipboard}
-                className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl cursor-pointer hover:bg-amber-100 transition-all active:scale-95 relative group"
+                className={`cursor-pointer p-6 rounded-3xl border-2 border-dashed ${gradientBtn} hover:opacity-90 transition`}
               >
-                <span className="text-4xl font-black tracking-widest text-amber-600 font-mono">
-                  {generatedCode}
-                </span>
-                <p className="text-[10px] text-amber-400 mt-2 font-bold uppercase tracking-wider">
-                  {copied ? '✅ Code Copied!' : 'Click to copy code'}
-                </p>
+                <span className="text-4xl font-black tracking-widest font-mono">{generatedCode}</span>
+                <p className="text-xs mt-2 font-bold uppercase text-slate-900">Click to copy code</p>
               </div>
+
+              {copied && (
+                <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-2 rounded-xl shadow-lg">
+                  Copied to clipboard!
+                </div>
+              )}
 
               <button
                 type="button"
-                onClick={() => router.push('/my-spaces')}
-                className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-xl hover:bg-slate-800 transition-colors"
+                onClick={() => router.push(`/dashboard/${generatedCode}`)}
+                className={`w-full py-4 rounded-2xl ${gradientBtn} hover:opacity-90 transition-all text-slate-900 font-black text-xl`}
               >
                 Enter Space
               </button>
             </div>
           )}
-
         </form>
       </div>
     </main>

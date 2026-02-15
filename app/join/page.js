@@ -3,7 +3,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 
 export default function JoinSpace() {
   const [inviteCode, setInviteCode] = useState('');
@@ -33,7 +32,6 @@ export default function JoinSpace() {
     try {
       // Get all users
       const usersSnapshot = await getDocs(collection(db, "users"));
-
       let foundSpace = null;
 
       usersSnapshot.forEach((docSnap) => {
@@ -53,9 +51,36 @@ export default function JoinSpace() {
         return;
       }
 
+      // ROLE CHECK: block if roles mismatch
+      const userRole = user.role || 'partner'; // you can adjust how you fetch user's chosen role
+      if (userRole !== foundSpace.role) {
+        setError(`You cannot join this space. Role mismatch: space is for ${foundSpace.role}.`);
+        setLoading(false);
+        return;
+      }
+
+      // ❗ Partner Limit Check (only 2 people allowed)
+      if (foundSpace.role === 'partner') {
+        const joinedUsers = [];
+        usersSnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.spaces) {
+            data.spaces.forEach((space) => {
+              if (space.id === foundSpace.id) {
+                joinedUsers.push(docSnap.id);
+              }
+            });
+          }
+        });
+        if (joinedUsers.length >= 2) {
+          setError("This space is full! Only 2 people allowed for a partner space.");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Add space to current user
       const userRef = doc(db, "users", user.uid);
-
       await updateDoc(userRef, {
         spaces: arrayUnion(foundSpace)
       });
@@ -66,6 +91,7 @@ export default function JoinSpace() {
     } catch (err) {
       console.error(err);
       setError("Something went wrong.");
+      setLoading(false);
     }
 
     setLoading(false);

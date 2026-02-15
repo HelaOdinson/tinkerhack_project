@@ -18,21 +18,44 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([
     { id: 1, sender: 'her', text: 'Miss you already! ❤️' },
     { id: 2, sender: 'me', text: 'Me too, counting the days.' }
+    { id: 1, sender: 'her', text: 'Miss you already! ❤️' },
+    { id: 2, sender: 'me', text: 'Me too, counting the days.' }
   ]);
-  
+  const [myPhoto, setMyPhoto] = useState('/memories/me.jpg');
+  const [herPhoto, setHerPhoto] = useState('/memories/her.jpg');
   const chatEndRef = useRef(null);
 
+  // Expanded Theme Object to control the Schedule Card colors
   const themes = {
-    rose: { bg: "bg-[#FFF0F3]", border: "border-rose-200", text: "text-rose-700", title: "text-rose-950", accent: "bg-rose-400", chat: "bg-rose-400", card: "bg-rose-50 border-rose-300" },
-    green: { bg: "bg-[#E8F5E9]", border: "border-emerald-200", text: "text-emerald-700", title: "text-emerald-950", accent: "bg-emerald-400", chat: "bg-emerald-500", card: "bg-emerald-50 border-emerald-300" },
-    blue: { bg: "bg-[#E3F2FD]", border: "border-blue-200", text: "text-blue-700", title: "text-blue-950", accent: "bg-blue-400", chat: "bg-blue-500", card: "bg-blue-50 border-blue-300" },
+    rose: { 
+      bg: "bg-[#FFF0F3]", border: "border-rose-200", text: "text-rose-700", title: "text-rose-950", 
+      accent: "bg-rose-400", chat: "bg-rose-400", card: "bg-rose-50 border-rose-300" 
+    },
+    green: { 
+      bg: "bg-[#E8F5E9]", border: "border-emerald-200", text: "text-emerald-700", title: "text-emerald-950", 
+      accent: "bg-emerald-400", chat: "bg-emerald-500", card: "bg-emerald-50 border-emerald-300" 
+    },
+    blue: { 
+      bg: "bg-[#E3F2FD]", border: "border-blue-200", text: "text-blue-700", title: "text-blue-950", 
+      accent: "bg-blue-400", chat: "bg-blue-500", card: "bg-blue-50 border-blue-300" 
+    },
   };
 
   const spaceConfig = {
-    space1: { title: "Cyber Squad", tagline: "Encrypted & Connected 🔐" },
-    space2: { title: "Web Wizards", tagline: "Building Magic Together ✨" },
-    space3: { title: "AI Circle", tagline: "Learning Beyond Limits 🤖" },
-  };
+  space1: {
+    title: "Cyber Squad",
+    tagline: "Encrypted & Connected 🔐",
+  },
+  space2: {
+    title: "Web Wizards",
+    tagline: "Building Magic Together ✨",
+  },
+  space3: {
+    title: "AI Circle",
+    tagline: "Learning Beyond Limits 🤖",
+  },
+};
+
 
   useEffect(() => {
     setMounted(true);
@@ -44,6 +67,7 @@ export default function Dashboard() {
     }, 1000);
 
     const slideTimer = setInterval(() => setCurrentPic(prev => (prev % 3) + 1), 5000);
+    return () => { clearInterval(timer); clearInterval(slideTimer); };
     return () => { clearInterval(timer); clearInterval(slideTimer); };
   }, []);
 
@@ -57,6 +81,7 @@ export default function Dashboard() {
 
   return (
     <main className={`flex min-h-screen ${currentTheme.bg} transition-all duration-500 ease-in-out`}>
+      
       
       {/* SIDEBAR */}
       <aside className={`transition-all duration-500 ease-in-out bg-white/40 backdrop-blur-2xl border-r border-white/20 flex flex-col p-4 sticky top-0 h-screen shadow-xl relative ${isSidebarExpanded ? 'w-72' : 'w-24'}`}>
@@ -97,10 +122,15 @@ export default function Dashboard() {
         <header className="flex justify-between items-center mb-10 max-w-6xl mx-auto">
           <div>
             <h1 className={`font-romantic italic font-black text-5xl tracking-tight ${currentTheme.title}`}>
-              {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].title : "The Chaos Corner"}
+              {spaceId && spaceConfig[spaceId]
+              ? spaceConfig[spaceId].title
+              : "The Chaos Corner"}
             </h1>
+
             <p className={`text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ${currentTheme.text}`}>
-              {spaceId && spaceConfig[spaceId] ? spaceConfig[spaceId].tagline : "5.5 Hours Apart • Connected ❤️"}
+              {spaceId && spaceConfig[spaceId]
+              ? spaceConfig[spaceId].tagline
+              : "5.5 Hours Apart • Connected ❤️"}
             </p>
           </div>
 
@@ -120,6 +150,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-7 gap-1 text-[10px] font-bold text-center opacity-30 mb-4">
                 {['S','M','T','W','T','F','S'].map((d, i) => <span key={i}>{d}</span>)}
               </div>
+              <div className="grid grid-cols-7 gap-1 mb-8">
               <div className="grid grid-cols-7 gap-1 mb-8">
                 {[...Array(31)].map((_, i) => (
                   <div key={i} className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full ${i === 13 ? 'bg-slate-800 text-white shadow-lg' : `text-slate-400 ${currentTheme.text} opacity-80`}`}>{i + 1}</div>
@@ -158,15 +189,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <Link href="/memories" className={`inline-flex items-center gap-3 px-10 py-4 rounded-full bg-white border-2 ${currentTheme.border} ${currentTheme.text} font-black uppercase text-[10px] tracking-[0.3em] shadow-lg hover:scale-105 transition-all active:scale-95 group`}>
-              <span>Explore Gallery</span>
-              <span className="group-hover:translate-x-1 transition-transform">✨</span>
-            </Link>
-
             <div className="bg-white rounded-[2.5rem] shadow-xl p-4 h-[260px] flex flex-col border border-slate-50">
               <div className="flex-1 overflow-y-auto p-2 space-y-3 no-scrollbar">
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium animate-reveal ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
                     <div className={`max-w-[80%] p-3 rounded-2xl text-sm font-medium animate-reveal ${msg.sender === 'me' ? `${currentTheme.chat} text-white rounded-br-none` : 'bg-slate-100 text-slate-600 rounded-bl-none'}`}>{msg.text}</div>
                   </div>
                 ))}
@@ -179,6 +206,7 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* RIGHT ASIDE (Clocks & Pulse) */}
           <aside className="md:col-span-3 space-y-6">
             <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl text-center">
                <div className="space-y-4">
@@ -194,11 +222,13 @@ export default function Dashboard() {
                   <div className="text-center group">
                      <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
                         <Image src="/memories/me.jpg" alt="Me" fill className="object-cover" />
+                        <Image src="/memories/me.jpg" alt="Me" fill className="object-cover" />
                      </div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Topher ✨</p>
                   </div>
                   <div className="text-center group">
                      <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white shadow-md bg-slate-100 mb-2">
+                        <Image src="/memories/her.jpg" alt="Her" fill className="object-cover" />
                         <Image src="/memories/her.jpg" alt="Her" fill className="object-cover" />
                      </div>
                      <p className={`font-romantic italic font-bold text-lg ${currentTheme.text}`}>Annabel 🌸</p>
@@ -209,5 +239,42 @@ export default function Dashboard() {
         </div>
       </div>
     </main>
+  );
+}
+
+// Countdown & other helpers if needed
+
+function MemberAvatar({ uid }) {
+  const [member, setMember] = useState(null);
+
+  useEffect(() => {
+    const fetchMember = async () => {
+      const docSnap = await getDoc(doc(db, "users", uid));
+      if (docSnap.exists()) setMember(docSnap.data());
+    };
+    fetchMember();
+  }, [uid]);
+
+  if (!member) return null;
+  return (
+    <img
+      src={member.photoURL}
+      alt={member.name}
+      title={member.name}
+      className="w-12 h-12 rounded-full"
+    />
+  );
+}
+
+// Simple Calendar component
+function Calendar() {
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  return (
+    <input
+      type="date"
+      value={date}
+      onChange={(e) => setDate(e.target.value)}
+      className="border px-3 py-2 rounded w-full"
+    />
   );
 }
