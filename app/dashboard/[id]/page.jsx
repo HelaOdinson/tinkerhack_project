@@ -10,6 +10,8 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 export default function SmartDashboard({ params }) {
   const resolvedParams = use(params);
   const spaceId = resolvedParams?.id;
