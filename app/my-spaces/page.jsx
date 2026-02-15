@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 export default function MySpaces() {
   const [spaces, setSpaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -46,26 +48,19 @@ export default function MySpaces() {
         </p>
       </div>
 
-      {/* Loading */}
       {loading && (
         <p className="text-slate-400">Loading your spaces...</p>
       )}
 
-      {/* Empty */}
-      {!loading && spaces.length === 0 && (
-        <div className="bg-white border border-rose-100 rounded-3xl p-10 shadow-md text-center">
-          <p className="text-slate-500 font-medium">
-            You haven’t created a space yet.
-          </p>
-        </div>
-      )}
+      {/* Grid */}
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 
-      {/* Spaces */}
-      <div className="grid gap-8 md:grid-cols-2">
+        {/* Existing Spaces */}
         {spaces.map((space) => (
           <div
             key={space.id}
-            className="bg-white border border-rose-100 rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => router.push(`/dashboard/${space.id}`)}
+            className="cursor-pointer bg-white border border-rose-100 rounded-3xl p-8 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
           >
             <h2 className="text-2xl font-black text-slate-800 mb-2">
               {space.spaceName}
@@ -86,8 +81,21 @@ export default function MySpaces() {
             </div>
           </div>
         ))}
-      </div>
 
+        {/* Add New Space Card */}
+        <div
+          onClick={() => router.push('/roles')}
+          className="cursor-pointer flex items-center justify-center rounded-3xl border-2 border-dashed border-rose-200 bg-white/40 backdrop-blur-sm hover:bg-rose-50 transition-all duration-300 min-h-[250px]"
+        >
+          <div className="text-center">
+            <div className="text-6xl font-black text-rose-300 mb-3">+</div>
+            <p className="text-slate-400 font-bold">
+              Create New Space
+            </p>
+          </div>
+        </div>
+
+      </div>
     </main>
   );
 }
