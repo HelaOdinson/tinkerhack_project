@@ -15,28 +15,32 @@ export default function CreateSpace() {
   const [locations, setLocations] = useState({ home: '', away: '' });
   const [reunionDate, setReunionDate] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
-<<<<<<< HEAD
   const [distance, setDistance] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  // 🌍 Get coordinates
+  // 🌍 Get coordinates using OpenStreetMap
   const getCityCoordinates = async (cityName) => {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?city=${cityName}&format=json&limit=1`
-    );
-    const data = await res.json();
-    if (!data.length) return null;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?city=${cityName}&format=json&limit=1`
+      );
+      const data = await res.json();
+      if (!data.length) return null;
 
-    return {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon)
-    };
+      return {
+        lat: parseFloat(data[0].lat),
+        lon: parseFloat(data[0].lon)
+      };
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      return null;
+    }
   };
 
-  // 📏 Distance
+  // 📏 Calculate Haversine distance
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const toRad = (val) => (val * Math.PI) / 180;
-    const R = 6371;
+    const R = 6371; // km
 
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
@@ -55,14 +59,13 @@ export default function CreateSpace() {
 
     if (step === 1 && spaceName) {
       setStep(2);
-    }
-
+    } 
     else if (step === 3 && locations.home && locations.away) {
       const homeCoords = await getCityCoordinates(locations.home);
       const awayCoords = await getCityCoordinates(locations.away);
 
       if (!homeCoords || !awayCoords) {
-        alert("Enter valid cities");
+        alert("Please enter valid city names");
         return;
       }
 
@@ -75,19 +78,14 @@ export default function CreateSpace() {
 
       setDistance(dist);
       setStep(4);
-    }
-
+    } 
     else if (step === 4 && reunionDate) {
       const user = auth.currentUser;
-      if (!user) return alert("Not logged in");
-=======
-  const [copied, setCopied] = useState(false); // New state for copy feedback
->>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
+      if (!user) return alert("Please log in to save your space");
 
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
       setGeneratedCode(code);
 
-<<<<<<< HEAD
       const newSpace = {
         id: crypto.randomUUID(),
         role,
@@ -95,39 +93,28 @@ export default function CreateSpace() {
         vibe,
         homeCity: locations.home,
         awayCity: locations.away,
-        distance,
+        distance: `${distance} km`,
         reunionDate,
         joinCode: code,
         createdAt: new Date().toISOString()
       };
 
-      await updateDoc(doc(db, "users", user.uid), {
-        spaces: arrayUnion(newSpace)
-      });
-
-      setStep(5);
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          spaces: arrayUnion(newSpace)
+        });
+        setStep(5);
+      } catch (error) {
+        console.error("Error saving space:", error);
+        alert("Failed to create space. Please try again.");
+      }
     }
   };
 
-  // ✅ COPY FUNCTION
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-=======
-  // New function to handle copying
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (step === 1 && spaceName) setStep(2);
-    if (step === 3 && locations.home && locations.away) setStep(4);
-    if (step === 4 && reunionDate) setStep(5);
->>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
   };
 
   return (
@@ -137,25 +124,26 @@ export default function CreateSpace() {
         <form onSubmit={handleSubmit}>
 
           {step === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-reveal">
               <h2 className="text-3xl font-black">
                 Name your <span className="text-rose-400">space</span>.
               </h2>
               <input
                 autoFocus
                 type="text"
+                placeholder="e.g., Our Little World"
                 value={spaceName}
                 onChange={(e) => setSpaceName(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-slate-50 outline-none"
+                className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-rose-200 transition-all"
               />
-              <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold">
+              <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-colors">
                 Continue
               </button>
             </div>
           )}
 
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-reveal">
               <h2 className="text-3xl font-black">
                 What's the <span className="text-amber-400">vibe</span>?
               </h2>
@@ -164,7 +152,7 @@ export default function CreateSpace() {
                   key={v}
                   type="button"
                   onClick={() => { setVibe(v); setStep(3); }}
-                  className="w-full p-4 rounded-2xl border text-left font-bold"
+                  className="w-full p-4 rounded-2xl border border-slate-100 text-left font-bold hover:bg-slate-50 hover:border-amber-200 transition-all"
                 >
                   {v}
                 </button>
@@ -173,22 +161,24 @@ export default function CreateSpace() {
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-reveal">
               <h2 className="text-3xl font-black">Where are you both?</h2>
-              <input
-                type="text"
-                placeholder="Your City"
-                value={locations.home}
-                onChange={(e) => setLocations({ ...locations, home: e.target.value })}
-                className="w-full p-4 rounded-2xl bg-slate-50"
-              />
-              <input
-                type="text"
-                placeholder="Their City"
-                value={locations.away}
-                onChange={(e) => setLocations({ ...locations, away: e.target.value })}
-                className="w-full p-4 rounded-2xl bg-slate-50"
-              />
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Your City (e.g., Kerala)"
+                  value={locations.home}
+                  onChange={(e) => setLocations({ ...locations, home: e.target.value })}
+                  className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-slate-200"
+                />
+                <input
+                  type="text"
+                  placeholder="Their City (e.g., London)"
+                  value={locations.away}
+                  onChange={(e) => setLocations({ ...locations, away: e.target.value })}
+                  className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-slate-200"
+                />
+              </div>
               <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold">
                 Calculate Distance
               </button>
@@ -196,13 +186,13 @@ export default function CreateSpace() {
           )}
 
           {step === 4 && (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-reveal">
               <h2 className="text-3xl font-black">When is the reunion?</h2>
               <input
                 type="date"
                 value={reunionDate}
                 onChange={(e) => setReunionDate(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-slate-50"
+                className="w-full p-4 rounded-2xl bg-slate-50 outline-none border border-transparent focus:border-rose-200"
               />
               <button type="submit" className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold">
                 Finish Setup
@@ -211,53 +201,27 @@ export default function CreateSpace() {
           )}
 
           {step === 5 && (
-<<<<<<< HEAD
-            <div className="text-center space-y-6 relative">
-              <div className="text-6xl">🎉</div>
-              <h2 className="text-3xl font-black">Space Created!</h2>
-              <p className="text-slate-500">Distance: {distance} km</p>
-
-              {/* COPY BOX */}
-              <div
-                onClick={copyToClipboard}
-                className="cursor-pointer bg-amber-50 border-2 border-dashed p-6 rounded-3xl hover:bg-amber-100 transition"
-              >
-                <span className="text-4xl font-black tracking-widest font-mono">
-                  {generatedCode}
-                </span>
-                <p className="text-xs mt-2 font-bold uppercase">
-                  Click to copy code
-=======
             <div className="text-center space-y-6 animate-reveal">
               <div className="text-6xl mb-4">🎉</div>
               <h2 className="text-3xl font-black tracking-tight">Space Created!</h2>
-              <p className="text-slate-500 font-medium leading-relaxed">Share this code with your partner so they can join you.</p>
+              <p className="text-slate-500 font-medium">Distance: {distance} km</p>
               
-              {/* UPDATED CODE BOX WITH COPY FUNCTION */}
               <div 
-                onClick={handleCopy}
-                className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl mt-4 cursor-pointer hover:bg-amber-100 transition-all active:scale-95 group relative"
+                onClick={copyToClipboard}
+                className="bg-amber-50 border-2 border-dashed border-amber-200 p-6 rounded-3xl cursor-pointer hover:bg-amber-100 transition-all active:scale-95 relative group"
               >
-                <span className="text-4xl font-black tracking-widest text-amber-600 select-all font-mono">
-                  {generatedCode || 'BEYOND26'}
+                <span className="text-4xl font-black tracking-widest text-amber-600 font-mono">
+                  {generatedCode}
                 </span>
                 <p className="text-[10px] text-amber-400 mt-2 font-bold uppercase tracking-wider">
                   {copied ? '✅ Code Copied!' : 'Click to copy code'}
->>>>>>> a58f20d2da1198b3fb9d82b4a7f371010ab217ca
                 </p>
               </div>
-
-              {/* POPUP */}
-              {copied && (
-                <div className="absolute top-0 right-0 bg-green-500 text-white px-4 py-2 rounded-xl shadow-lg">
-                  Copied to clipboard!
-                </div>
-              )}
 
               <button
                 type="button"
                 onClick={() => router.push('/my-spaces')}
-                className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-xl"
+                className="w-full py-4 rounded-2xl bg-slate-900 text-white font-black text-xl hover:bg-slate-800 transition-colors"
               >
                 Enter Space
               </button>

@@ -23,7 +23,7 @@ export default function LoginPage() {
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
-      // 🆕 If user does NOT exist → create them
+      // 🆕 CASE 1: New User -> Create document and send to /roles
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           name: user.displayName,
@@ -33,9 +33,20 @@ export default function LoginPage() {
           spaces: []
         });
 
-        router.push("/roles"); // New user
-      } else {
-        router.push("/my-spaces"); // Existing user
+        router.push("/roles");
+      } 
+      // 🔄 CASE 2: Existing User Check
+      else {
+        const userData = userSnap.data();
+        
+        // If they exist but have no spaces, send them back to setup
+        if (!userData.spaces || userData.spaces.length === 0) {
+          router.push("/roles");
+        } 
+        // ✅ Existing user with active spaces
+        else {
+          router.push("/my-spaces");
+        }
       }
 
     } catch (error) {
@@ -45,52 +56,55 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#FFFDFB] font-sans relative">
+    <div className="min-h-screen flex bg-[#FFFDFB] font-sans relative overflow-hidden">
 
-      {/* Stickers */}
+      {/* Stickers - Floating animations */}
       <img
         src="/stickers/otter.png"
         alt="Otter"
-        className="absolute top-16 left-20 w-20 h-20 animate-bounce"
+        className="absolute top-16 left-20 w-20 h-20 animate-bounce z-10"
       />
 
       <img
         src="/stickers/tulips.png"
         alt="Tulip"
-        className="absolute bottom-23 right-210 w-20 h-20 animate-bounce"
+        className="absolute bottom-24 left-1/3 w-20 h-20 animate-bounce z-10"
       />
 
-      {/* LEFT SIDE */}
-      <div className="w-1/2 flex flex-col justify-center items-center px-16">
+      {/* LEFT SIDE: Authentication UI */}
+      <div className="w-full md:w-1/2 flex flex-col justify-center items-center px-16 z-20">
 
-        <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-black mb-6 bg-gradient-to-r from-rose-400 to-amber-400 bg-clip-text text-transparent text-center leading-tight">
           Welcome To BeyondMiles!
         </h1>
 
-        <p className="text-gray-600 mb-8 text-center">
+        <p className="text-gray-600 mb-8 text-center max-w-sm font-medium">
           Connect with your people, relive memories, and stay close no matter the miles.
         </p>
 
+        {/* Updated Button: No Image */}
         <button
           onClick={handleGoogleAuth}
-          className="w-full max-w-sm px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-rose-400 to-amber-400 hover:scale-105 transition-transform shadow-lg"
+          className="w-full max-w-sm px-6 py-4 rounded-2xl font-black text-white bg-gradient-to-r from-rose-400 to-amber-400 hover:scale-[1.02] transition-all shadow-xl shadow-rose-200/50 flex items-center justify-center"
         >
           Continue with Google
         </button>
 
-        <p className="mt-6 text-gray-500 text-sm text-center">
+        <p className="mt-8 text-gray-400 text-[10px] font-black uppercase tracking-widest text-center">
           New users will be asked to select their role ✨
         </p>
 
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="w-1/2 hidden md:block">
+      {/* RIGHT SIDE: Visual Hero */}
+      <div className="w-1/2 hidden md:block relative">
         <img
           src="/login.png"
           alt="Login Visual"
           className="h-full w-full object-cover"
         />
+        {/* Overlay gradient to blend with the left side */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#FFFDFB] via-transparent to-transparent"></div>
       </div>
 
     </div>
