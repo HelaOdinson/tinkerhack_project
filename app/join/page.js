@@ -3,33 +3,26 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { auth, db } from '@/lib/firebase';
-import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 export default function JoinSpace() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  // 1. Capture the role from the URL (e.g., ?role=Couple)
   const joiningUserRole = searchParams.get('role'); 
 
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Safety: If no role is selected, redirect back to selection after a delay
   useEffect(() => {
-    if (!joiningUserRole && !loading) {
-      setError("No role selected. Please go back to the selection page.");
+    if (!joiningUserRole) {
+      setError("No role selected. Please go back to selection.");
     }
   }, [joiningUserRole]);
 
   const handleJoin = async (e) => {
     e.preventDefault();
-    if (!joiningUserRole) {
-      setError("Please select a role first.");
-      return;
-    }
+    if (!joiningUserRole) return;
 
     setError('');
     setLoading(true);
@@ -44,53 +37,38 @@ export default function JoinSpace() {
     }
 
     try {
-      // 2. Search central 'spaces' collection for the code
-      const spacesSnapshot = await getDocs(collection(db, "spaces"));
-      let foundSpace = null;
+      // 1. Direct fetch using the code as the ID
+      const spaceRef = doc(db, "spaces", code);
+      const spaceSnap = await getDoc(spaceRef);
 
-      spacesSnapshot.forEach((docSnap) => {
-        if (docSnap.data().joinCode === code) {
-          foundSpace = { ...docSnap.data(), docId: docSnap.id };
-        }
-      });
-
-      if (!foundSpace) {
+      if (!spaceSnap.exists()) {
         setError("No space found with that code.");
         setLoading(false);
         return;
       }
 
-      // 🔴 3. THE ROLE LOCK: Case-Insensitive Comparison
-      // This prevents "Couple" vs "couple" from failing.
-      const dbRole = foundSpace.role.toLowerCase();
-      const userRole = joiningUserRole.toLowerCase();
+      const foundSpace = spaceSnap.data();
 
-      if (dbRole !== userRole) {
-        setError(`Role Mismatch! This space was created for "${foundSpace.role}" users.`);
+      // 🔴 FIX: Changed 'spaceData' to 'foundSpace' and added discreet message
+      if (foundSpace.role.toLowerCase() !== joiningUserRole.toLowerCase()) {
         setLoading(false);
+        setError("Wrong role chosen for this space.");
         return;
       }
 
-      // 4. CHECK MEMBER LIMITS (For Couple role)
+      // 2. Member Limit Check
       if (foundSpace.role === 'Couple' && foundSpace.members?.length >= 2) {
-        setError("This Couple space is already full! ❤️");
+        setError("This space is full.");
         setLoading(false);
         return;
       }
 
-      // 5. Prevent joining a space you're already in
-      if (foundSpace.members?.includes(user.uid)) {
-        router.push(`/dashboard/${foundSpace.id}`);
-        return;
-      }
-
-      // 6. Update the central space document
-      const spaceRef = doc(db, "spaces", foundSpace.docId);
+      // 3. Update Master Space
       await updateDoc(spaceRef, {
         members: arrayUnion(user.uid)
       });
 
-      // 7. Update the user's personal document
+      // 4. Update User Profile
       const userRef = doc(db, "users", user.uid);
       await updateDoc(userRef, {
         spaces: arrayUnion({
@@ -99,67 +77,44 @@ export default function JoinSpace() {
         })
       });
 
-      // Success!
-      router.push(`/dashboard/${foundSpace.id}`);
+      router.push(`/dashboard/${code}`);
 
     } catch (err) {
-      console.error("Join Error:", err);
-      setError("Failed to join. Please try again.");
+      console.error(err);
+      setError("Failed to join. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen bg-[#FFFDFB] text-slate-800 font-sans flex items-center justify-center px-6">
-      <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-rose-50 shadow-2xl shadow-rose-100/30">
-        
+    <main className="min-h-screen bg-[#FFFDFB] flex items-center justify-center px-6">
+      <div className="max-w-md w-full bg-white rounded-[2.5rem] p-10 border border-rose-50 shadow-2xl">
         <form onSubmit={handleJoin} className="space-y-8">
           <div className="text-center">
-            <h1 className="text-4xl font-black tracking-tight mb-2">
-              Join as <span className="text-rose-400 capitalize">{joiningUserRole || '...'}</span>
-            </h1>
-            <p className="text-slate-500 font-medium leading-relaxed italic">
-              "Connecting two worlds with one code."
-            </p>
+            <h1 className="text-3xl font-black">Join as <span className="text-rose-400 capitalize">{joiningUserRole}</span></h1>
+            <p className="text-slate-400 text-sm italic mt-2">Enter the shared code below</p>
           </div>
 
-          <div className="space-y-4">
-            <input 
-              autoFocus
-              type="text" 
-              placeholder="CODE"
-              maxLength={8}
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-rose-200 outline-none text-center text-4xl font-black tracking-[0.3em] transition-all placeholder:text-slate-200 uppercase"
-            />
-            
-            <button 
-              type="submit"
-              disabled={inviteCode.length < 4 || loading || !joiningUserRole}
-              className="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xl hover:bg-rose-500 transition-all disabled:opacity-50 shadow-xl active:scale-95 cursor-pointer"
-            >
-              {loading ? "Verifying..." : "Enter Space ✨"}
-            </button>
-
-            {error && (
-              <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
-                <p className="text-rose-500 text-xs font-bold text-center uppercase tracking-widest leading-tight">
-                  {error}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="h-[1px] bg-slate-100 w-full" />
-
-          <Link 
-            href="/roles" 
-            className="block text-center text-slate-400 font-bold hover:text-slate-600 transition-colors text-xs uppercase tracking-widest"
+          <input 
+            type="text" 
+            placeholder="CODE"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+            className="w-full p-5 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-rose-200 outline-none text-center text-4xl font-black tracking-widest text-slate-900 uppercase"
+          />
+          
+          <button 
+            type="submit"
+            disabled={inviteCode.length < 4 || loading}
+            className="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-xl hover:bg-rose-500 transition-all disabled:opacity-50"
           >
-            Change Role Selection
-          </Link>
+            {loading ? "Verifying..." : "Enter Space ✨"}
+          </button>
+
+          {error && <p className="text-rose-500 text-[10px] font-black text-center uppercase tracking-widest bg-rose-50 p-3 rounded-xl">{error}</p>}
+          
+          <Link href="/roles" className="block text-center text-slate-400 font-bold text-[10px] uppercase tracking-widest">Back to Roles</Link>
         </form>
       </div>
     </main>
